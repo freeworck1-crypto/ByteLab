@@ -1,0 +1,221 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.android.gms.oss-licenses-plugin'
+}
+
+android {
+    namespace 'com.vectras.vm'
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId "com.niaznix.bytelab"
+        minSdk minApi
+        targetSdk targetApi
+        versionCode 157
+        versionName "4.5.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        multiDexEnabled true
+
+        resValue "string", "app_version", versionName
+        resValue "integer", "app_version_code", versionCode.toString()
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+        aidl true
+        resValues = true
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+            universalApk true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    buildToolsVersion '36.0.0'
+    ndkVersion '27.3.13750724'
+
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    sourceSets {
+        main.assets.srcDir "$buildDir/generated/legalAssets"
+        debug.assets.srcDir "$buildDir/generated/loaderAssets/debug"
+        release.assets.srcDir "$buildDir/generated/loaderAssets/release"
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.each { output ->
+            def abiFilter = output.filters.find {
+                it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI
+            }
+            if (variant.buildType == 'release') {
+                def abiName = abiFilter?.identifier ?: 'universal'
+                output.outputFileName.set(output.versionCode.map { code ->
+                    "vectras-vm-github-${abiName}-${code}.apk".toString()
+                })
+            } else if (variant.buildType == 'debug') {
+                // ABI splits are configured globally; keep debug as one universal APK.
+                output.enabled.set(abiFilter == null)
+                if (abiFilter == null) output.outputFileName.set('app-debug.apk')
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation libs.androidx.appcompat
+    implementation libs.material
+    implementation libs.androidx.annotation
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.drawerlayout
+    implementation libs.androidx.preference.ktx
+    implementation libs.androidx.swiperefreshlayout
+    implementation libs.androidx.viewpager
+    implementation libs.guava
+    implementation libs.gson
+    implementation libs.androidx.window
+    implementation libs.commons.io
+    implementation libs.lottie
+    implementation libs.commons.compress
+    implementation libs.androidx.activity.ktx
+    implementation libs.androidx.constraintlayout
+    implementation libs.androidx.preference.ktx
+    implementation libs.androidx.documentfile
+    implementation libs.androidx.core.ktx
+    compileOnly project(':shell-loader:stub')
+    implementation project(":terminal-view")
+    
+    // Retrofit
+    implementation libs.retrofit
+    implementation libs.converter.gson
+
+    // Glide
+    implementation libs.glide
+    annotationProcessor libs.compiler
+    
+    // Test dependencies
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+
+    implementation libs.play.services.oss.licenses
+}
+
+afterEvaluate {
+    def legalAssetsTask = tasks.register("generateLegalDocumentAssets", Copy) {
+        from(rootProject.projectDir) {
+            include "TERMSOFSERVICE.md", "PRIVACYANDPOLICY.md"
+        }
+        into(layout.buildDirectory.dir("generated/legalAssets/legal"))
+    }
+
+    ["Debug", "Release"].each { buildType ->
+        def buildTypeLower = buildType.toLowerCase()
+        def copyLoaderTask = tasks.register("generate${buildType}LoaderAsset", Copy) {
+            dependsOn(":shell-loader:assemble${buildType}")
+            from(project(":shell-loader").layout.buildDirectory.file("outputs/apk/${buildTypeLower}/loader.apk"))
+            into(layout.buildDirectory.dir("generated/loaderAssets/${buildTypeLower}/bootstrap"))
+        }
+        tasks.named("merge${buildType}Assets").configure {
+            dependsOn(copyLoaderTask, legalAssetsTask)
+        }
+    }
+
+    tasks.register("generatePrefs") {
+        //noinspection UnnecessaryQualifiedReference
+        def xml = groovy.xml.DOMBuilder.parse((new StringReader(file('src/main/res/xml/preferences_x11.xml').text)))
+        def preferenceNodes = xml.documentElement.getElementsByTagName("*")
+        def preferences = []
+
+        for (int i = 0; i < preferenceNodes.length; i++) {
+            def node = preferenceNodes.item(i)
+            if (node.nodeName == 'EditTextPreference' && node.getAttribute("app:key") != "extra_keys_config")
+                preferences << [ type: 'String',  key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue") ]
+            else if (node.nodeName == 'SeekBarPreference')
+                preferences << [ type: 'Int', key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue") ]
+            else if (node.nodeName == 'ListPreference') {
+                def entries = node.getAttribute("app:entries")
+                def values = node.getAttribute("app:entryValues")
+                preferences << [type: 'List', key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue"),
+                                entries: entries.substring(7, entries.length()), values: values.substring(7, values.length())]
+            }
+            else if (node.nodeName == 'SwitchPreferenceCompat')
+                preferences << [ type: 'Boolean',  key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue") ]
+        }
+
+        def out = file('build/generated/java/com/vectras/vm/x11/Prefs.java')
+        out.getParentFile().exists() || out.getParentFile().mkdirs()
+        out.delete()
+        out.createNewFile()
+
+        out << 'package com.vectras.vm.x11;\n'
+        out << 'import java.util.HashMap;\n'
+        out << 'import android.content.Context;\n'
+        out << 'import com.vectras.vm.x11.utils.TermuxX11ExtraKeys;\n'
+        out << 'import com.vectras.vm.R;\n'
+        out << '\n'
+        out << 'public class Prefs extends LoriePreferences.PrefsProto {\n'
+        preferences.each {
+            if (it.type == 'Int' || it.type == 'Boolean')
+                out << "  public final ${it.type}Preference ${it.key} = new ${it.type}Preference(\"${it.key}\", ${it.default});\n"
+            else if (it.type == 'String')
+                out << "  public final StringPreference ${it.key} = new StringPreference(\"${it.key}\", \"${it.default}\");\n"
+            else if (it.type == 'List')
+                out << "  public final ${it.type}Preference ${it.key} = new ${it.type}Preference(\"${it.key}\", \"${it.default}\", R.array.${it.entries}, R.array.${it.values});\n"
+        }
+        out << '  public final StringPreference extra_keys_config = new StringPreference("extra_keys_config", TermuxX11ExtraKeys.DEFAULT_IVALUE_EXTRA_KEYS);\n'
+        out << '  public final HashMap<String, Preference> keys = new HashMap<>() {{\n'
+        preferences.each { out << '    put("' + it.key + '", ' + it.key + ');\n' }
+        out << '    put("extra_keys_config", extra_keys_config);\n'
+        out << '  }};\n'
+        out << '\n'
+        out << '  public Prefs(Context ctx) {\n'
+        out << '    super(ctx);\n'
+        out << '  }\n'
+        out << '}\n'
+    }
+    android.sourceSets.main.java.srcDirs += 'build/generated/java'
+    preBuild.dependsOn generatePrefs
+
+    tasks.register("generateShortcuts") {
+        def out = file('build/generated/templateRes/xml/shortcuts.xml')
+        out.getParentFile().exists() || out.getParentFile().mkdirs()
+        out.text = file('src/main/templates/xml/shortcuts.xml').text
+                .replace('@@APPLICATION_ID@@', android.defaultConfig.applicationId)
+    }
+    android.sourceSets.main.res.srcDirs += 'build/generated/templateRes'
+    preBuild.dependsOn generateShortcuts
+}
