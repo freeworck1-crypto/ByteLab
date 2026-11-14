@@ -169,6 +169,9 @@
             android:exported="false"
             android:windowSoftInputMode="stateHidden" /> <!-- uiMode so that FlashActivity does not automatically restart when changing themes, causing MainActivity to be called twice. -->
         <activity
+            android:name=".AndroidSystemPickerActivity"
+            android:exported="false" />
+        <activity
             android:name=".SplashActivity"
             android:configChanges="uiMode|orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:exported="true">

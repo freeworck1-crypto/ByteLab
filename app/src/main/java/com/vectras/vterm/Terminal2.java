@@ -126,6 +126,11 @@ public class Terminal2 {
 
                 processBuilder.environment().put("PROOT_TMP_DIR", tmpDir);
 
+                // The bundled proot binary has the OLD package name (com.vectras.vm) hard-coded
+                // as its loader path. Point it to this app's real loader instead.
+                processBuilder.environment().put("PROOT_LOADER", new File(filesDir, "usr/libexec/proot/loader").getAbsolutePath());
+                processBuilder.environment().put("PROOT_LOADER_32", new File(filesDir, "usr/libexec/proot/loader32").getAbsolutePath());
+
                 // PRoot is stored in the app-private usr/bin directory.
                 // Tell Android's dynamic linker where its bundled shared libraries live.
                 String prootLibraryDir = new File(filesDir, "usr/lib").getAbsolutePath();

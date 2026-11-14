@@ -25,6 +25,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.termux.app.TermuxActivity;
 import com.vectras.qemu.MainSettingsManager;
+import com.vectras.vm.AndroidSystemPickerActivity;
 import com.vectras.vm.AppConfig;
 import com.vectras.vm.R;
 import com.vectras.vm.VMManager;
@@ -144,6 +145,10 @@ public class SetupWizard2Activity extends AppCompatActivity {
 
         binding.btnAllowPermission.setOnClickListener(v -> PermissionUtils.requestStoragePermission(this));
 
+        // Hide the manual setup choices; setup is automatic now.
+        binding.standardSetupOption.setVisibility(View.GONE);
+        binding.customSetupOption.setVisibility(View.GONE);
+
         binding.standardSetupOption.setOnClickListener(v -> {
             getDataForStandardSetup();
         });
@@ -181,7 +186,7 @@ public class SetupWizard2Activity extends AppCompatActivity {
                 uiControllerFinalSteps(currentStep + 1);
                 IntentUtils.openUrl(this, AppConfig.patreonLink);
             } else {
-                startActivity(new Intent(this, MainActivity.class));
+                startActivity(new Intent(this, AndroidSystemPickerActivity.class));
                 finish();
             }
         });
@@ -378,25 +383,8 @@ public class SetupWizard2Activity extends AppCompatActivity {
     private void requestQemuArchive() {
         if (isExecutingCommand) return;
         installQemuFromAlpinePackages = false;
-        if (QemuSetupPolicy.is32BitAbi(Build.SUPPORTED_ABIS[0])) {
-            loadQemuManifest(true);
-            return;
-        }
-        showQemuArchiveDialog();
-    }
-
-    private void showQemuArchiveDialog() {
-        uiController(STEP_SETUP_OPTIONS);
-        binding.standardSetupOption.setVisibility(View.VISIBLE);
-        DialogUtils.twoDialog(this,
-                getString(R.string.qemu_archive_required),
-                getString(R.string.download_qemu_archive_content),
-                getString(R.string.download_qemu_from_github),
-                getString(R.string.select_qemu_archive),
-                true, R.drawable.folder_24px, true,
-                this::getDataForStandardSetup,
-                () -> bootstrapFilePicker.launch("*/*"),
-                null);
+        // No "online / from file" choice: always set up automatically.
+        loadQemuManifest(QemuSetupPolicy.is32BitAbi(Build.SUPPORTED_ABIS[0]));
     }
 
     private void getDataForStandardSetup() {
@@ -449,9 +437,6 @@ public class SetupWizard2Activity extends AppCompatActivity {
             if (installQemuFromAlpinePackages) {
                 isCustomSetupMode = false;
                 startSetup();
-            } else if (showArchiveOptions) {
-                // Keep manual selection available even when the manifest request fails.
-                showQemuArchiveDialog();
             } else if (!qemuDownloadUrl.isEmpty()) {
                 isCustomSetupMode = false;
                 startSetup();
