@@ -125,6 +125,17 @@ public class Terminal2 {
                 }
 
                 processBuilder.environment().put("PROOT_TMP_DIR", tmpDir);
+
+                // PRoot is stored in the app-private usr/bin directory.
+                // Tell Android's dynamic linker where its bundled shared libraries live.
+                String prootLibraryDir = new File(filesDir, "usr/lib").getAbsolutePath();
+                String existingLibraryPath = processBuilder.environment().get("LD_LIBRARY_PATH");
+                String updatedLibraryPath = prootLibraryDir;
+                if (existingLibraryPath != null && !existingLibraryPath.trim().isEmpty()) {
+                    updatedLibraryPath += File.pathSeparator + existingLibraryPath;
+                }
+                processBuilder.environment().put("LD_LIBRARY_PATH", updatedLibraryPath);
+
                 processBuilder.environment().put("HOME", home);
                 processBuilder.environment().put("USER", user);
                 processBuilder.environment().put("TERM", "xterm-256color");
