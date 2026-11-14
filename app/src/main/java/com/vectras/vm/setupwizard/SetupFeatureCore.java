@@ -217,13 +217,13 @@ public class SetupFeatureCore {
         // Remove the original absolute shell links.
         try {
             try {
-                Os.unlink(sh.getAbsolutePath());
+                Os.remove(sh.getAbsolutePath());
             } catch (ErrnoException ignored) {
                 sh.delete();
             }
 
             try {
-                Os.unlink(ash.getAbsolutePath());
+                Os.remove(ash.getAbsolutePath());
             } catch (ErrnoException ignored) {
                 ash.delete();
             }
