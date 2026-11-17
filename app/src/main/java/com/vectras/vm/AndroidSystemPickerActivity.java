@@ -1,20 +1,17 @@
 package com.vectras.vm;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.TextView;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -41,208 +38,236 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * "Select Android System" screen.
- * - Download a version (needs your own direct URL below) OR tap "Add custom image" to pick a file from the phone.
- * - Tap a downloaded row, then Next to boot it, or "Add shortcut" to pin it on the home screen.
+ * ByteLab home screen. The UI is HTML (assets/ui/index.html) shown in a WebView.
+ * The list of systems comes from your backend: BACKEND_URL + "/api/catalog".
  */
 public class AndroidSystemPickerActivity extends AppCompatActivity {
+
+    // TODO: put your Render URL here (no slash at the end).
+    private static final String BACKEND_URL = "https://YOUR-APP.onrender.com";
 
     public static final String EXTRA_LAUNCH_ID = "bytelab_android_launch_id";
     private static final String PREFS = "android_picker";
 
-    private static class Entry {
-        final String id, title, arch, size, url, qemuParams;
-        TextView action;
-        ProgressBar bar;
-
-        Entry(String id, String title, String arch, String size, String url, String qemuParams) {
-            this.id = id; this.title = title; this.arch = arch;
-            this.size = size; this.url = url; this.qemuParams = qemuParams;
-        }
-    }
-
-    // TODO: replace every url with your own direct link to the Android disk image (.img / .qcow2).
-    private static final String BASE = "https://YOUR-HOST/";
-    private final List<Entry> catalog = new ArrayList<>();
-
-    private Entry selected;
-    private View selectedRow;
-    private Button next, shortcutBtn;
-    private LinearLayout list;
+    private WebView web;
+    private boolean pageReady = false;
+    private JSONArray serverItems = new JSONArray();
     private ActivityResultLauncher<String[]> pickImage;
 
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         pickImage = registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::importCustomImage);
 
-        loadCatalog();
+        getWindow().setStatusBarColor(Color.parseColor("#0E1716"));
+        getWindow().setNavigationBarColor(Color.parseColor("#0E1716"));
 
-        // Opened from a home-screen shortcut: boot that Android directly.
-        String launchId = getIntent().getStringExtra(EXTRA_LAUNCH_ID);
-        if (launchId != null) {
-            Entry e = find(launchId);
-            if (e != null && isDownloaded(e)) {
-                launch(e);
-            } else {
-                Toast.makeText(this, "This Android image is missing. Download or add it again.", Toast.LENGTH_LONG).show();
-            }
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.parseColor("#0E1716"));
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            v.setPadding(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+
+        web = new WebView(this);
+        web.setBackgroundColor(Color.parseColor("#0E1716"));
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setAllowFileAccess(true);
+        web.addJavascriptInterface(new Bridge(), "Android");
+        root.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        setContentView(root);
+
+        // Saved catalog first, so shortcuts and offline use work.
+        try {
+            serverItems = new JSONArray(prefs().getString("catalog_cache", "[]"));
+        } catch (Exception ignored) {
         }
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#14121C"));
-        root.setPadding(dp(16), dp(40), dp(16), dp(16));
-        root.addView(text("Select Android System", 22, Color.WHITE, true));
+        String launchId = getIntent().getStringExtra(EXTRA_LAUNCH_ID);
+        if (launchId != null) {
+            JSONObject it = findItem(launchId);
+            if (it != null && fileFor(launchId) != null) launch(it);
+            else Toast.makeText(this, "This system is missing. Download it again.", Toast.LENGTH_LONG).show();
+        }
 
-        list = new LinearLayout(this);
-        list.setOrientation(LinearLayout.VERTICAL);
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(list);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+        web.loadUrl("file:///android_asset/ui/index.html");
+    }
 
-        Button custom = new Button(this);
-        custom.setText("+ Add custom image (from phone)");
-        custom.setOnClickListener(v -> pickImage.launch(new String[]{"*/*"}));
-        root.addView(custom, new LinearLayout.LayoutParams(-1, dp(48)));
+    // ---------- bridge (called from HTML) ----------
 
-        shortcutBtn = new Button(this);
-        shortcutBtn.setText("Add shortcut to home screen");
-        shortcutBtn.setEnabled(false);
-        shortcutBtn.setOnClickListener(v -> addShortcut());
-        root.addView(shortcutBtn, new LinearLayout.LayoutParams(-1, dp(48)));
+    private class Bridge {
+        @JavascriptInterface
+        public void ready() {
+            pageReady = true;
+            pushCatalog(null);
+            loadCatalog();
+        }
 
-        next = new Button(this);
-        next.setText("Next");
-        next.setEnabled(false);
-        next.setOnClickListener(v -> { if (selected != null) launch(selected); });
-        root.addView(next, new LinearLayout.LayoutParams(-1, dp(52)));
+        @JavascriptInterface
+        public void toast(String t) {
+            runOnUiThread(() -> Toast.makeText(AndroidSystemPickerActivity.this, t, Toast.LENGTH_SHORT).show());
+        }
 
-        Button skip = new Button(this);
-        skip.setText("Open VM list");
-        skip.setOnClickListener(v -> {
-            startActivity(new Intent(this, MainActivity.class));
-            finish();
-        });
-        root.addView(skip, new LinearLayout.LayoutParams(-1, dp(48)));
+        @JavascriptInterface
+        public void download(String id) {
+            AndroidSystemPickerActivity.this.download(id);
+        }
 
-        setContentView(root);
-        buildRows();
+        @JavascriptInterface
+        public void launch(String id) {
+            runOnUiThread(() -> {
+                JSONObject it = findItem(id);
+                if (it != null) AndroidSystemPickerActivity.this.launch(it);
+            });
+        }
+
+        @JavascriptInterface
+        public void shortcut(String id) {
+            runOnUiThread(() -> addShortcut(id));
+        }
+
+        @JavascriptInterface
+        public void remove(String id) {
+            removeImage(id);
+        }
+
+        @JavascriptInterface
+        public void addCustom() {
+            runOnUiThread(() -> pickImage.launch(new String[]{"*/*"}));
+        }
+
+        @JavascriptInterface
+        public void openVmList() {
+            runOnUiThread(() -> {
+                startActivity(new Intent(AndroidSystemPickerActivity.this, MainActivity.class));
+                finish();
+            });
+        }
     }
 
     // ---------- catalog ----------
-
-    private void loadCatalog() {
-        catalog.clear();
-        catalog.add(new Entry("a5_1_1", "Android 5.1.1", "arm64 / arm32", "221MB", BASE + "android-5.1.1.img", ""));
-        catalog.add(new Entry("a7_1_2", "Android 7.1.2", "arm64 / arm32", "298MB", BASE + "android-7.1.2.img", ""));
-        catalog.add(new Entry("a9_0_0", "Android 9.0.0", "arm64", "282MB", BASE + "android-9.0.0.img", ""));
-        catalog.add(new Entry("a11_0_0", "Android 11.0.0", "arm64", "351MB", BASE + "android-11.0.0.img", ""));
-        catalog.add(new Entry("a12_1_0", "Android 12.1.0", "arm64", "520MB", BASE + "android-12.1.0.img", ""));
-        try {
-            JSONArray arr = new JSONArray(prefs().getString("custom", "[]"));
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject o = arr.getJSONObject(i);
-                catalog.add(new Entry(o.getString("id"), o.getString("title"), "custom", "", "", ""));
-            }
-        } catch (Exception ignored) {
-        }
-    }
-
-    private Entry find(String id) {
-        for (Entry e : catalog) if (e.id.equals(id)) return e;
-        return null;
-    }
 
     private SharedPreferences prefs() {
         return getSharedPreferences(PREFS, MODE_PRIVATE);
     }
 
-    // ---------- UI ----------
+    private void loadCatalog() {
+        new Thread(() -> {
+            if (BACKEND_URL.contains("YOUR-APP")) {
+                pushCatalog("Backend not set. Put your Render URL in BACKEND_URL (AndroidSystemPickerActivity.java).");
+                return;
+            }
+            try {
+                HttpURLConnection c = (HttpURLConnection) new URL(BACKEND_URL + "/api/catalog").openConnection();
+                c.setConnectTimeout(60000); // free Render servers can take ~50s to wake up
+                c.setReadTimeout(60000);
+                if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
+                StringBuilder sb = new StringBuilder();
+                try (InputStream in = c.getInputStream()) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) != -1) sb.append(new String(buf, 0, n, "UTF-8"));
+                }
+                JSONArray arr = new JSONObject(sb.toString()).getJSONArray("items");
+                serverItems = arr;
+                prefs().edit().putString("catalog_cache", arr.toString()).apply();
+                pushCatalog(null);
+            } catch (Exception e) {
+                pushCatalog("Can't reach the server (" + e.getMessage() + "). Showing your saved list.");
+            }
+        }).start();
+    }
 
-    private void buildRows() {
-        list.removeAllViews();
-        selected = null;
-        selectedRow = null;
-        next.setEnabled(false);
-        shortcutBtn.setEnabled(false);
-        for (Entry e : catalog) {
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(8), dp(14), dp(8), dp(14));
-
-            LinearLayout info = new LinearLayout(this);
-            info.setOrientation(LinearLayout.VERTICAL);
-            info.addView(text(e.title, 17, Color.WHITE, true));
-            String sub = "Arch: " + e.arch + (e.size.isEmpty() ? "" : "  |  Size: " + e.size);
-            info.addView(text(sub, 13, Color.parseColor("#B8B3C6"), false));
-            e.bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-            e.bar.setMax(100);
-            e.bar.setVisibility(View.GONE);
-            info.addView(e.bar, new LinearLayout.LayoutParams(-1, dp(8)));
-            row.addView(info, new LinearLayout.LayoutParams(0, -2, 1f));
-
-            e.action = text(isDownloaded(e) ? "Downloaded" : "Download", 15, Color.parseColor("#D0BCFF"), true);
-            e.action.setPadding(dp(12), dp(8), dp(4), dp(8));
-            e.action.setOnClickListener(v -> onAction(e));
-            row.addView(e.action);
-
-            row.setOnClickListener(v -> select(e, row));
-            list.addView(row);
+    private JSONArray customItems() {
+        try {
+            return new JSONArray(prefs().getString("custom", "[]"));
+        } catch (Exception e) {
+            return new JSONArray();
         }
     }
 
-    private void select(Entry e, View row) {
-        if (!isDownloaded(e)) {
-            Toast.makeText(this, "Download it first", Toast.LENGTH_SHORT).show();
-            return;
+    private JSONObject findItem(String id) {
+        try {
+            for (int i = 0; i < serverItems.length(); i++)
+                if (id.equals(serverItems.getJSONObject(i).getString("id"))) return serverItems.getJSONObject(i);
+            JSONArray c = customItems();
+            for (int i = 0; i < c.length(); i++)
+                if (id.equals(c.getJSONObject(i).getString("id"))) return c.getJSONObject(i);
+        } catch (Exception ignored) {
         }
-        if (selectedRow != null) selectedRow.setBackgroundColor(Color.TRANSPARENT);
-        selected = e;
-        selectedRow = row;
-        row.setBackgroundColor(Color.parseColor("#2A2540"));
-        next.setEnabled(true);
-        shortcutBtn.setEnabled(true);
+        return null;
     }
 
-    private void onAction(Entry e) {
-        if (isDownloaded(e)) return;
-        if (e.url.isEmpty() || e.url.contains("YOUR-HOST")) {
-            Toast.makeText(this, "No download link set for " + e.title + ". Use \"Add custom image\" instead.", Toast.LENGTH_LONG).show();
-            return;
+    /** Sends server list + your own images (with "downloaded" flags) to the HTML page. */
+    private void pushCatalog(String notice) {
+        if (!pageReady) return;
+        try {
+            JSONArray all = new JSONArray();
+            for (int i = 0; i < serverItems.length(); i++) {
+                JSONObject o = new JSONObject(serverItems.getJSONObject(i).toString());
+                o.put("downloaded", fileFor(o.getString("id")) != null);
+                all.put(o);
+            }
+            JSONArray c = customItems();
+            for (int i = 0; i < c.length(); i++) {
+                JSONObject o = new JSONObject(c.getJSONObject(i).toString());
+                o.put("downloaded", fileFor(o.getString("id")) != null);
+                all.put(o);
+            }
+            JSONObject info = new JSONObject();
+            if (notice != null) info.put("notice", notice);
+            final String js = "onCatalog(" + JSONObject.quote(all.toString()) + "," + info + ")";
+            runOnUiThread(() -> web.evaluateJavascript(js, null));
+        } catch (Exception ignored) {
         }
-        download(e);
     }
 
     // ---------- files ----------
 
-    private static File imageFile(String id) {
+    private File fileFor(String id) {
+        String path = prefs().getString("file_" + id, "");
+        if (path.isEmpty()) return null;
+        File f = new File(path);
+        return f.isFile() && f.length() > 0 ? f : null;
+    }
+
+    private File newImageFile(String id, String fileName) {
         File dir = new File(AppConfig.maindirpath + "android-images");
         if (!dir.exists()) dir.mkdirs();
-        return new File(dir, id + ".img");
+        String ext = ".img";
+        int dot = fileName == null ? -1 : fileName.lastIndexOf('.');
+        if (dot >= 0 && fileName.length() - dot <= 8) ext = fileName.substring(dot).toLowerCase();
+        return new File(dir, id + ext);
     }
 
-    private boolean isDownloaded(Entry e) {
-        File f = imageFile(e.id);
-        return f.isFile() && f.length() > 0;
-    }
-
-    private void download(Entry e) {
-        e.action.setText("Downloading…");
-        e.action.setEnabled(false);
-        e.bar.setVisibility(View.VISIBLE);
+    private void download(String id) {
+        JSONObject it = findItem(id);
+        if (it == null) return;
+        final String url = it.optString("downloadUrl", "");
+        final String fileName = it.optString("fileName", "");
+        String lower = fileName.toLowerCase();
+        if (url.isEmpty()) {
+            toastUi("Not uploaded yet");
+            pushCatalog(null);
+            return;
+        }
+        if (lower.endsWith(".zip") || lower.endsWith(".xz") || lower.endsWith(".gz") || lower.endsWith(".7z")) {
+            toastUi("Archives are not supported. Upload a raw .img or .qcow2 file.");
+            pushCatalog(null);
+            return;
+        }
         new Thread(() -> {
-            File part = new File(imageFile(e.id).getPath() + ".part");
+            File target = newImageFile(id, fileName);
+            File part = new File(target.getPath() + ".part");
             try {
-                HttpURLConnection c = (HttpURLConnection) new URL(e.url).openConnection();
-                c.setConnectTimeout(15000);
-                c.setReadTimeout(30000);
+                HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                c.setConnectTimeout(60000);
+                c.setReadTimeout(60000);
                 c.connect();
                 if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
                 long total = c.getContentLengthLong();
@@ -257,32 +282,27 @@ public class AndroidSystemPickerActivity extends AppCompatActivity {
                             int pct = (int) (done * 100 / total);
                             if (pct != last) {
                                 last = pct;
-                                runOnUiThread(() -> e.bar.setProgress(pct));
+                                final int p = pct;
+                                runOnUiThread(() -> web.evaluateJavascript("onProgress(" + JSONObject.quote(id) + "," + p + ")", null));
                             }
                         }
                     }
                 }
-                if (!part.renameTo(imageFile(e.id))) throw new Exception("Could not save file");
-                runOnUiThread(() -> {
-                    e.bar.setVisibility(View.GONE);
-                    e.action.setText("Downloaded");
-                    e.action.setEnabled(true);
-                });
+                if (target.exists()) target.delete();
+                if (!part.renameTo(target)) throw new Exception("Could not save file");
+                prefs().edit().putString("file_" + id, target.getAbsolutePath()).apply();
             } catch (Exception ex) {
                 part.delete();
-                runOnUiThread(() -> {
-                    e.bar.setVisibility(View.GONE);
-                    e.action.setText("Download");
-                    e.action.setEnabled(true);
-                    Toast.makeText(this, "Download failed: " + ex.getMessage(), Toast.LENGTH_LONG).show();
-                });
+                toastUi("Download failed: " + ex.getMessage());
             }
+            runOnUiThread(() -> web.evaluateJavascript("onProgressDone(" + JSONObject.quote(id) + ")", null));
+            pushCatalog(null);
         }).start();
     }
 
     private void importCustomImage(Uri uri) {
         if (uri == null) return;
-        String name = "custom image";
+        String name = "Custom image";
         try (Cursor c = getContentResolver().query(uri, null, null, null, null)) {
             if (c != null && c.moveToFirst()) {
                 int i = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
@@ -292,39 +312,62 @@ public class AndroidSystemPickerActivity extends AppCompatActivity {
         }
         final String title = name;
         final String id = "custom_" + System.currentTimeMillis();
-        Toast.makeText(this, "Copying image…", Toast.LENGTH_SHORT).show();
+        toastUi("Copying image…");
         new Thread(() -> {
+            File target = newImageFile(id, title);
             try (InputStream in = getContentResolver().openInputStream(uri);
-                 FileOutputStream out = new FileOutputStream(imageFile(id))) {
+                 FileOutputStream out = new FileOutputStream(target)) {
                 byte[] buf = new byte[65536];
                 int n;
                 while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                JSONArray arr = new JSONArray(prefs().getString("custom", "[]"));
-                arr.put(new JSONObject().put("id", id).put("title", title));
-                prefs().edit().putString("custom", arr.toString()).apply();
-                runOnUiThread(() -> {
-                    loadCatalog();
-                    buildRows();
-                    Toast.makeText(this, "Added: " + title, Toast.LENGTH_SHORT).show();
-                });
+                JSONArray arr = customItems();
+                arr.put(new JSONObject().put("id", id).put("platform", "custom").put("name", title)
+                        .put("arch", "custom image").put("vmArch", "ARM64").put("size", "")
+                        .put("params", "").put("iconUrl", "").put("available", true));
+                prefs().edit().putString("custom", arr.toString()).putString("file_" + id, target.getAbsolutePath()).apply();
+                toastUi("Added: " + title);
             } catch (Exception ex) {
-                imageFile(id).delete();
-                runOnUiThread(() -> Toast.makeText(this, "Could not add image: " + ex.getMessage(), Toast.LENGTH_LONG).show());
+                target.delete();
+                toastUi("Could not add image: " + ex.getMessage());
             }
+            pushCatalog(null);
         }).start();
+    }
+
+    private void removeImage(String id) {
+        File f = fileFor(id);
+        if (f != null) f.delete();
+        SharedPreferences.Editor e = prefs().edit().remove("file_" + id);
+        if (id.startsWith("custom_")) {
+            JSONArray arr = customItems(), keep = new JSONArray();
+            try {
+                for (int i = 0; i < arr.length(); i++)
+                    if (!id.equals(arr.getJSONObject(i).getString("id"))) keep.put(arr.getJSONObject(i));
+            } catch (Exception ignored) {
+            }
+            e.putString("custom", keep.toString());
+        }
+        e.apply();
+        pushCatalog(null);
     }
 
     // ---------- boot ----------
 
-    private void launch(Entry e) {
-        String prefKey = "vm_" + e.id;
+    private void launch(JSONObject it) {
+        String id = it.optString("id");
+        File img = fileFor(id);
+        if (img == null) {
+            Toast.makeText(this, "Download it first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String prefKey = "vm_" + id;
         String vmId = prefs().getString(prefKey, "");
         int pos = vmId.isEmpty() ? -1 : findVmPosition(vmId);
 
         if (pos < 0) {
             vmId = VMManager.idGenerator();
-            boolean ok = VMManager.createNewVM(e.title, "", imageFile(e.id).getAbsolutePath(),
-                    "ARM64", "", e.qemuParams, vmId, VMManager.startRandomPort());
+            boolean ok = VMManager.createNewVM(it.optString("name", "Android"), "", img.getAbsolutePath(),
+                    it.optString("vmArch", "ARM64"), "", it.optString("params", ""), vmId, VMManager.startRandomPort());
             if (!ok) {
                 Toast.makeText(this, "Could not create the virtual phone", Toast.LENGTH_LONG).show();
                 return;
@@ -353,38 +396,29 @@ public class AndroidSystemPickerActivity extends AppCompatActivity {
 
     // ---------- home-screen shortcut ----------
 
-    private void addShortcut() {
-        if (selected == null) return;
+    private void addShortcut(String id) {
+        JSONObject it = findItem(id);
+        if (it == null) return;
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(this)) {
             Toast.makeText(this, "Your launcher does not support pinned shortcuts", Toast.LENGTH_LONG).show();
             return;
         }
         Intent i = new Intent(this, AndroidSystemPickerActivity.class);
         i.setAction(Intent.ACTION_VIEW);
-        i.putExtra(EXTRA_LAUNCH_ID, selected.id);
+        i.putExtra(EXTRA_LAUNCH_ID, id);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-        ShortcutInfoCompat info = new ShortcutInfoCompat.Builder(this, "android_" + selected.id)
-                .setShortLabel(selected.title)
-                .setLongLabel(selected.title)
+        String label = it.optString("name", "Android");
+        ShortcutInfoCompat info = new ShortcutInfoCompat.Builder(this, "bytelab_" + id)
+                .setShortLabel(label)
+                .setLongLabel(label)
                 .setIcon(IconCompat.createWithResource(this, getApplicationInfo().icon))
                 .setIntent(i)
                 .build();
         ShortcutManagerCompat.requestPinShortcut(this, info, null);
     }
 
-    // ---------- helpers ----------
-
-    private TextView text(String s, int sp, int color, boolean bold) {
-        TextView t = new TextView(this);
-        t.setText(s);
-        t.setTextSize(sp);
-        t.setTextColor(color);
-        if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
-        return t;
-    }
-
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
+    private void toastUi(String t) {
+        runOnUiThread(() -> Toast.makeText(this, t, Toast.LENGTH_LONG).show());
     }
 }
