@@ -186,7 +186,7 @@ public class SetupWizard2Activity extends AppCompatActivity {
                 uiControllerFinalSteps(currentStep + 1);
                 IntentUtils.openUrl(this, AppConfig.patreonLink);
             } else {
-                startActivity(new Intent(this, AndroidSystemPickerActivity.class));
+                startActivity(new Intent(this, MainActivity.class));
                 finish();
             }
         });
@@ -607,7 +607,7 @@ public class SetupWizard2Activity extends AppCompatActivity {
                         MainSettingsManager.setCoreSetupVersion(SetupWizard2Activity.this, AppConfig.coreSetupVersion);
                         MainSettingsManager.setsetUpWithManualSetupBefore(SetupWizard2Activity.this, isCustomSetupMode);
                         uiController(STEP_JOIN_COMMUNITY);
-                        if (ACTION == ACTION_SYSTEM_UPDATE) uiControllerFinalSteps(STEP_FINISH);
+                        uiControllerFinalSteps(STEP_FINISH);
                     });
                 } else {
                     runOnUiThread(() -> {

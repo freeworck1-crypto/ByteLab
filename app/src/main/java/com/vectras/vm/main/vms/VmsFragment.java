@@ -55,10 +55,10 @@ public class VmsFragment extends Fragment implements CallbackInterface.HomeCallT
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setEnterTransition(new MaterialFadeThrough());
-        setReturnTransition(new MaterialFadeThrough());
-        setExitTransition(new MaterialFadeThrough());
-        setReenterTransition(new MaterialFadeThrough());
+        // setEnterTransition(new MaterialFadeThrough()); (removed for speed)
+        // setReturnTransition(new MaterialFadeThrough()); (removed for speed)
+        // setExitTransition(new MaterialFadeThrough()); (removed for speed)
+        // setReenterTransition(new MaterialFadeThrough()); (removed for speed)
     }
 
     @Override

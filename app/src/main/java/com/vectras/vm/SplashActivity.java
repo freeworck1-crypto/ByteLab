@@ -138,7 +138,7 @@ public class SplashActivity extends AppCompatActivity {
                 intent.setClass(this, SetupWizard2Activity.class);
                 startActivity(intent);
             } else {
-                startActivity(new Intent(this, AndroidSystemPickerActivity.class));
+                startActivity(new Intent(this, MainActivity.class));
             }
         } else {
             startActivity(new Intent(this, SetupWizard2Activity.class));

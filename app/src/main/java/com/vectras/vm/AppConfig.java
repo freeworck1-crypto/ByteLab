@@ -33,6 +33,8 @@ public class AppConfig {
     public static String vectrasRepo = "https://github.com/xoureldeen/Vectras-VM-Android";
     public static String updateJson = vectrasRaw + "UpdateConfig.json";
     public static String romStoreJson = vectrasRaw + "vroms-store.json";
+    // Your own store list: edit store/roms.json in your ByteLab GitHub repo to add systems.
+    public static String myRomStoreJson = "https://raw.githubusercontent.com/freeworck1-crypto/ByteLab/main/store/roms.json";
     public static String softwareStoreJson = vectrasRaw + "software-store.json";
     public static String blogJson = vectrasRaw + "news_list.json";
     // public static final String storeJson = vectrasRaw + "store_list.json";

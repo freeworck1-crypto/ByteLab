@@ -28,6 +28,30 @@
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
         <item name="materialSwitchStyle">@style/App.MaterialSwitch</item>
         <item name="colorCard">?attr/colorSurfaceContainerHigh</item>
+        <!-- ByteLab colours -->
+        <item name="colorPrimary">#7FD6C9</item>
+        <item name="colorOnPrimary">#003732</item>
+        <item name="colorPrimaryContainer">#0F4F49</item>
+        <item name="colorOnPrimaryContainer">#BDEBE3</item>
+        <item name="colorSecondary">#F0C65A</item>
+        <item name="colorOnSecondary">#3E2E00</item>
+        <item name="colorSecondaryContainer">#5A4300</item>
+        <item name="colorOnSecondaryContainer">#FFE08A</item>
+        <item name="colorTertiary">#F0C65A</item>
+        <item name="colorTertiaryContainer">#5A4300</item>
+        <item name="colorOnTertiaryContainer">#FFE08A</item>
+        <item name="colorBackground">#0E1716</item>
+        <item name="colorSurface">#0E1716</item>
+        <item name="colorOnBackground">#E4EAE8</item>
+        <item name="colorOnSurface">#E4EAE8</item>
+        <item name="colorSurfaceVariant">#2A3B38</item>
+        <item name="colorOnSurfaceVariant">#A9BAB6</item>
+        <item name="colorSurfaceContainerLowest">#0A1211</item>
+        <item name="colorSurfaceContainerLow">#131F1E</item>
+        <item name="colorSurfaceContainer">#182625</item>
+        <item name="colorSurfaceContainerHigh">#1E2F2D</item>
+        <item name="colorSurfaceContainerHighest">#253837</item>
+        <item name="colorOutline">#5F7570</item>
     </style>
 
     <!-- See https://developer.android.com/training/material/theme.html for how to customize the Material theme. -->

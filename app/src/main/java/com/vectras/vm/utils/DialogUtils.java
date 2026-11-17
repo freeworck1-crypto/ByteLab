@@ -261,6 +261,7 @@ public class DialogUtils {
     }
 
     public static void joinTelegram(Context _context) {
+        if (true) return; // community popup removed
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(_context);
         if (!prefs.getBoolean("tgDialog", false)) {
             threeDialog(_context, _context.getResources().getString(R.string.join_us_on_telegram),

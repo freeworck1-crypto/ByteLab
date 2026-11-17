@@ -42,10 +42,10 @@ public class RomStoreFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setEnterTransition(new MaterialFadeThrough());
-        setReturnTransition(new MaterialFadeThrough());
-        setExitTransition(new MaterialFadeThrough());
-        setReenterTransition(new MaterialFadeThrough());
+        // setEnterTransition(new MaterialFadeThrough()); (removed for speed)
+        // setReturnTransition(new MaterialFadeThrough()); (removed for speed)
+        // setExitTransition(new MaterialFadeThrough()); (removed for speed)
+        // setReenterTransition(new MaterialFadeThrough()); (removed for speed)
     }
 
     @Override
@@ -95,16 +95,48 @@ public class RomStoreFragment extends Fragment {
         romStoreCallToHomeListener.updateSearchStatus(false);
         binding.linearload.setVisibility(View.VISIBLE);
 
-        Retrofit2Utils.get(AppConfig.romStoreJson, ((isSuccess, body, status, error) -> {
-            binding.linearload.setVisibility(View.GONE);
-            if (isSuccess) {
-                if (!body.isEmpty())
-                    contentJSON = body;
-                loadData();
-            } else {
-                binding.linearnothinghere.setVisibility(View.VISIBLE);
-            }
+        final String[] results = new String[]{null, null};
+        final boolean[] done = new boolean[]{false, false};
+
+        // Both lists load at the same time: yours (ByteLab repo, store/roms.json) and the original one.
+        Retrofit2Utils.get(AppConfig.myRomStoreJson, ((ok, body, status, error) -> {
+            results[0] = (ok && body != null) ? body : "";
+            done[0] = true;
+            finishLoad(results, done);
         }));
+        Retrofit2Utils.get(AppConfig.romStoreJson, ((ok, body, status, error) -> {
+            results[1] = (ok && body != null) ? body : "";
+            done[1] = true;
+            finishLoad(results, done);
+        }));
+    }
+
+    private void finishLoad(String[] results, boolean[] done) {
+        if (!done[0] || !done[1]) return;
+        binding.linearload.setVisibility(View.GONE);
+        String mine = results[0], original = results[1];
+        if (!original.isEmpty()) {
+            contentJSON = mergeJson(mine, original);
+            loadData();
+        } else if (!mine.isEmpty()) {
+            contentJSON = mine;
+            loadData();
+        } else {
+            binding.linearnothinghere.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /** Your entries first, then the original ones. Falls back to the original list on any error. */
+    private String mergeJson(String mine, String original) {
+        if (mine == null || mine.isEmpty()) return original;
+        try {
+            com.google.gson.JsonArray out = new com.google.gson.JsonArray();
+            out.addAll(com.google.gson.JsonParser.parseString(mine).getAsJsonArray());
+            out.addAll(com.google.gson.JsonParser.parseString(original).getAsJsonArray());
+            return out.toString();
+        } catch (Exception e) {
+            return original;
+        }
     }
 
     private void loadData() {

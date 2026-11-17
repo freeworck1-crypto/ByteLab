@@ -357,8 +357,9 @@ public class MainActivity extends AppCompatActivity implements RomStoreFragment.
                     }
                 });
 
-        new LibraryChecker(this).
-        checkMissingLibraries(this);
+        if (!getSharedPreferences("bytelab_perf", MODE_PRIVATE).getBoolean("libs_ok", false)) {
+            new LibraryChecker(this).checkMissingLibraries(this); // slow (starts proot); only until it passes once
+        }
 
         setupDrawer();
         DialogUtils.joinTelegram(this);

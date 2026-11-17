@@ -61,8 +61,7 @@ public class VectrasApp extends Application {
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override
             public void onActivityPreCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
-                if (MainSettingsManager.getDynamicColor(activity))
-                    DynamicColors.applyToActivityIfAvailable(activity);
+                // ByteLab uses its own fixed colours (dynamic wallpaper colours disabled)
             }
 
             @Override

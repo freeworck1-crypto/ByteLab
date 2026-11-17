@@ -49,6 +49,7 @@ public class LibraryChecker {
             if (missingLibraries.toString().trim().length() > 0) {
                 showMissingLibrariesDialog(activity, missingLibraries.toString());
             } else {
+                context.getSharedPreferences("bytelab_perf", Context.MODE_PRIVATE).edit().putBoolean("libs_ok", true).apply();
                 // show a dialog if all libraries are installed
                 // showAllLibrariesInstalledDialog(activity);
             }

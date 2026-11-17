@@ -27,6 +27,30 @@
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
         <item name="materialSwitchStyle">@style/App.MaterialSwitch</item>
         <item name="colorCard">?attr/colorSurfaceContainerLowest</item>
+        <!-- ByteLab colours -->
+        <item name="colorPrimary">#1F6F66</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#BDEBE3</item>
+        <item name="colorOnPrimaryContainer">#00201D</item>
+        <item name="colorSecondary">#8A6A00</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#FFE08A</item>
+        <item name="colorOnSecondaryContainer">#2A1F00</item>
+        <item name="colorTertiary">#8A6A00</item>
+        <item name="colorTertiaryContainer">#FFE08A</item>
+        <item name="colorOnTertiaryContainer">#2A1F00</item>
+        <item name="colorBackground">#FBF7EB</item>
+        <item name="colorSurface">#FBF7EB</item>
+        <item name="colorOnBackground">#1C1B16</item>
+        <item name="colorOnSurface">#1C1B16</item>
+        <item name="colorSurfaceVariant">#E7E2D0</item>
+        <item name="colorOnSurfaceVariant">#4A483B</item>
+        <item name="colorSurfaceContainerLowest">#FFFFFF</item>
+        <item name="colorSurfaceContainerLow">#F6F1E2</item>
+        <item name="colorSurfaceContainer">#F0EBDB</item>
+        <item name="colorSurfaceContainerHigh">#EAE5D5</item>
+        <item name="colorSurfaceContainerHighest">#E4DFCF</item>
+        <item name="colorOutline">#7A7868</item>
     </style>
 
     <style name="SwitchStyle" parent="Widget.Material3.CompoundButton.MaterialSwitch" />
