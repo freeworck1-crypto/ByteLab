@@ -1109,9 +1109,13 @@ public class MainVNCActivity extends VncCanvasActivity {
 
         bindingControls.shutdownBtn.setOnClickListener(v -> {
             blurLayout();
-
-            DialogUtils.threeDialog(this, getString(R.string.power), getString(R.string.shutdown_or_reset_content_vnc), getString(R.string.shutdown), getString(R.string.reset), getString(R.string.power), true, R.drawable.power_settings_new_24px, true,
-                    this::shutdownthisvm, QmpSender::quickReset, VMManager::pressPowerButton, this::unBlurLayout);
+            VMManager.showExitOptions(this, Config.vmID, () -> {
+                started = false;
+                if (streamAudio != null && !VmAudioManager.currentVmId.equals(Config.vmID))
+                    streamAudio.setCross(null);
+                finish();
+            });
+            new Handler(Looper.getMainLooper()).postDelayed(this::unBlurLayout, 250);
         });
 
         bindingControls.shutdownBtn.setOnLongClickListener(view -> {

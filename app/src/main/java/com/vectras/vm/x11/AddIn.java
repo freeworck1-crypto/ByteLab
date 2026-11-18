@@ -35,6 +35,7 @@ import com.vectras.qemu.MainSettingsManager;
 import com.vectras.vm.Fragment.ControlersOptionsFragment;
 import com.vectras.vm.Fragment.LoggerDialogFragment;
 import com.vectras.vm.R;
+import com.vectras.vm.VMManager;
 import com.vectras.vm.databinding.ActivityX11Binding;
 import com.vectras.vm.databinding.ControlsFragmentBinding;
 import com.vectras.vm.databinding.DesktopControlsBinding;
@@ -153,7 +154,8 @@ public class AddIn {
             }
         });
 
-        bindingControls.shutdownBtn.setOnClickListener(v -> activity.finish());
+        bindingControls.shutdownBtn.setOnClickListener(v ->
+                VMManager.showExitOptions(activity, Config.vmID, activity::finish));
 
         bindingControls.kbdBtn.setOnClickListener(v -> new Handler(Looper.getMainLooper()).postDelayed(() -> activity.toggleKeyboardVisibility(activity), 200));
         bindingControls.btnMode.setOnClickListener(v -> {

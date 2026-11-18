@@ -957,6 +957,78 @@ public class VMManager {
         return FileUtils.move(AppConfig.vmFolder + Config.vmID + "/snapshot.bin.bak", AppConfig.vmFolder + Config.vmID + "/snapshot.bin");
     }
 
+    /** Presents the three exit actions used by the virtual-machine display. */
+    public static void showExitOptions(Activity activity, String vmId, Runnable onExit) {
+        DialogUtils.threeDialog(
+                activity,
+                "Leave virtual machine",
+                "Save your current session and leave it running later, shut it down, or restart it.",
+                "Leave for now",
+                "Shut down",
+                "Restart",
+                true,
+                R.drawable.power_settings_new_24px,
+                true,
+                () -> saveSessionAndExit(activity, vmId, onExit),
+                () -> {
+                    QmpSender.quickShutdown();
+                    if (onExit != null) onExit.run();
+                },
+                QmpSender::quickReset,
+                null
+        );
+    }
+
+    /** Saves a QEMU migration snapshot before stopping the emulator process. */
+    private static void saveSessionAndExit(Activity activity, String vmId, Runnable onExit) {
+        ProgressDialog progress = new ProgressDialog(activity);
+        progress.setText("Saving virtual machine session…");
+        progress.setFixTextColor(true);
+        progress.show();
+        new Thread(() -> {
+            try {
+                VmActions.takeScreenshot(activity, false);
+                QmpSender.pause();
+                String response = startMigrate();
+                if (response == null || !response.contains("terminal does not allow synchronous migration, continuing detached")) {
+                    QmpSender.resume();
+                    activity.runOnUiThread(() -> {
+                        progress.reset();
+                        DialogUtils.oopsDialog(activity, activity.getString(R.string.vm_state_save_failed_note));
+                    });
+                    return;
+                }
+                Boolean[] status = getMigrateStatus();
+                int attempts = 0;
+                while (!status[0] && !status[1] && attempts++ < 300) {
+                    Thread.sleep(1000);
+                    status = getMigrateStatus();
+                }
+                if (!status[0]) {
+                    QmpSender.resume();
+                    activity.runOnUiThread(() -> {
+                        progress.reset();
+                        DialogUtils.oopsDialog(activity, activity.getString(R.string.vm_state_save_failed_note));
+                    });
+                    return;
+                }
+                FileUtils.copyFile(VmFileManager.getCompiledBatteryAcpi(activity, vmId), VmFileManager.getPath(vmId));
+                FileUtils.copyFile(VmFileManager.getCompiledWifiCardAcpi(activity, vmId), VmFileManager.getPath(vmId));
+                QmpSender.quickShutdown();
+                activity.runOnUiThread(() -> {
+                    progress.reset();
+                    if (onExit != null) onExit.run();
+                });
+            } catch (Exception e) {
+                try { QmpSender.resume(); } catch (Exception ignored) { }
+                activity.runOnUiThread(() -> {
+                    progress.reset();
+                    DialogUtils.oopsDialog(activity, activity.getString(R.string.vm_state_save_failed_note));
+                });
+            }
+        }).start();
+    }
+
     public static void showPauseDialog(Activity _activity, String vmId) {
         DialogUtils.twoDialog(
                 _activity,
