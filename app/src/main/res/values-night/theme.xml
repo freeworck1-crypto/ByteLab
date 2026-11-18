@@ -40,7 +40,7 @@
         <item name="colorTertiary">#F0C65A</item>
         <item name="colorTertiaryContainer">#5A4300</item>
         <item name="colorOnTertiaryContainer">#FFE08A</item>
-        <item name="colorBackground">#0E1716</item>
+        <item name="android:colorBackground">#0E1716</item>
         <item name="colorSurface">#0E1716</item>
         <item name="colorOnBackground">#E4EAE8</item>
         <item name="colorOnSurface">#E4EAE8</item>
