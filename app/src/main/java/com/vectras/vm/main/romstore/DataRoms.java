@@ -31,6 +31,10 @@ public class DataRoms {
     public String creator;
     @SerializedName("verified")
     public boolean verified;
+    @SerializedName("rom_direct")
+    public boolean romDirect;
+    @SerializedName("rom_app")
+    public boolean romApp;
     @SerializedName("id")
     public String id;
     @SerializedName("vecid")

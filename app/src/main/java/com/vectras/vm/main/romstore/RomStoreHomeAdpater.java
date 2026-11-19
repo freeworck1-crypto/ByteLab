@@ -57,7 +57,7 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
         Glide.with(context).load(current.romIcon).override(180, 180).placeholder(R.drawable.ic_computer_180dp_with_padding).error(R.drawable.ic_computer_180dp_with_padding).into(myHolder.ivIcon);
         myHolder.textName.setText(current.romName);
         myHolder.textSize.setText(current.romArch + " - " + current.fileSize);
-        if (current.romAvail) {
+        if (Boolean.TRUE.equals(current.romAvail)) {
             myHolder.linearItem.setOnClickListener(v -> {
                 Intent intent = new Intent();
                 intent.setClass(context, RomInfo.class);
@@ -71,6 +71,8 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
                 intent.putExtra("extra", current.romExtra);
                 intent.putExtra("arch", current.romArch);
                 intent.putExtra("verified", current.verified);
+                intent.putExtra("directDownload", current.romDirect);
+                intent.putExtra("romApp", current.romApp);
                 intent.putExtra("creator", current.creator);
                 intent.putExtra("size", current.fileSize);
                 intent.putExtra("id", current.id);

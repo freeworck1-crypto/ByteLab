@@ -92,50 +92,109 @@ public class RomStoreFragment extends Fragment {
     }
 
     private void loadFromServer() {
-        romStoreCallToHomeListener.updateSearchStatus(false);
+        if (romStoreCallToHomeListener != null) {
+            romStoreCallToHomeListener.updateSearchStatus(false);
+        }
         binding.linearload.setVisibility(View.VISIBLE);
+        binding.linearnothinghere.setVisibility(View.GONE);
 
-        final String[] results = new String[]{null, null};
-        final boolean[] done = new boolean[]{false, false};
+        // Load the catalog bundled inside the APK first. This makes the added systems
+        // visible even when the optional GitHub catalog URL is unavailable.
+        final String bundled = readBundledCatalog();
+        final String[] results = new String[]{bundled, "", ""};
+        final boolean[] done = new boolean[]{true, false, false};
 
-        // Both lists load at the same time: yours (ByteLab repo, store/roms.json) and the original one.
+        // Load ByteLab's own catalog as well as the upstream catalog. The bundled
+        // catalog remains available when either network source is offline.
         Retrofit2Utils.get(AppConfig.myRomStoreJson, ((ok, body, status, error) -> {
-            results[0] = (ok && body != null) ? body : "";
-            done[0] = true;
-            finishLoad(results, done);
-        }));
-        Retrofit2Utils.get(AppConfig.romStoreJson, ((ok, body, status, error) -> {
             results[1] = (ok && body != null) ? body : "";
             done[1] = true;
-            finishLoad(results, done);
+            finishCatalogSources(results, done);
         }));
+        Retrofit2Utils.get(AppConfig.romStoreJson, ((ok, body, status, error) -> {
+            results[2] = (ok && body != null) ? body : "";
+            done[2] = true;
+            finishCatalogSources(results, done);
+        }));
+    }
+
+    private void finishCatalogSources(String[] results, boolean[] done) {
+        if (!done[0] || !done[1] || !done[2]) return;
+        String online = mergeJson(results[1], results[2]);
+        finishLoad(new String[]{results[0], online}, new boolean[]{true, true});
+    }
+
+    private String readBundledCatalog() {
+        java.io.InputStream input = null;
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        try {
+            input = requireContext().getAssets().open("roms.json");
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                output.write(buffer, 0, count);
+            }
+            return output.toString("UTF-8");
+        } catch (Exception ignored) {
+            return "[]";
+        } finally {
+            try { if (input != null) input.close(); } catch (Exception ignored) { }
+            try { output.close(); } catch (Exception ignored) { }
+        }
     }
 
     private void finishLoad(String[] results, boolean[] done) {
         if (!done[0] || !done[1]) return;
-        binding.linearload.setVisibility(View.GONE);
-        String mine = results[0], original = results[1];
-        if (!original.isEmpty()) {
-            contentJSON = mergeJson(mine, original);
-            loadData();
-        } else if (!mine.isEmpty()) {
-            contentJSON = mine;
-            loadData();
-        } else {
+
+        String bundled = results[0] == null ? "" : results[0];
+        String original = results[1] == null ? "" : results[1];
+        String merged = mergeJson(bundled, original);
+
+        if (merged == null || merged.trim().isEmpty() || "[]".equals(merged.trim())) {
+            binding.linearload.setVisibility(View.GONE);
             binding.linearnothinghere.setVisibility(View.VISIBLE);
+            if (romStoreCallToHomeListener != null) {
+                romStoreCallToHomeListener.updateSearchStatus(true);
+            }
+            return;
+        }
+
+        contentJSON = merged;
+        binding.linearload.setVisibility(View.GONE);
+        binding.linearnothinghere.setVisibility(View.GONE);
+        loadData();
+    }
+
+    /** Bundled entries appear first; original online entries are appended without duplicates. */
+    private String mergeJson(String bundled, String original) {
+        try {
+            com.google.gson.JsonArray out = new com.google.gson.JsonArray();
+            java.util.HashSet<String> seen = new java.util.HashSet<>();
+
+            addCatalogEntries(out, seen, bundled);
+            addCatalogEntries(out, seen, original);
+            return out.toString();
+        } catch (Exception e) {
+            return (bundled != null && !bundled.trim().isEmpty() && !"[]".equals(bundled.trim()))
+                    ? bundled : (original == null ? "[]" : original);
         }
     }
 
-    /** Your entries first, then the original ones. Falls back to the original list on any error. */
-    private String mergeJson(String mine, String original) {
-        if (mine == null || mine.isEmpty()) return original;
+    private void addCatalogEntries(com.google.gson.JsonArray output,
+                                   java.util.Set<String> seen, String json) {
+        if (json == null || json.trim().isEmpty()) return;
         try {
-            com.google.gson.JsonArray out = new com.google.gson.JsonArray();
-            out.addAll(com.google.gson.JsonParser.parseString(mine).getAsJsonArray());
-            out.addAll(com.google.gson.JsonParser.parseString(original).getAsJsonArray());
-            return out.toString();
-        } catch (Exception e) {
-            return original;
+            com.google.gson.JsonArray entries = com.google.gson.JsonParser.parseString(json).getAsJsonArray();
+            for (com.google.gson.JsonElement element : entries) {
+                if (!element.isJsonObject()) continue;
+                com.google.gson.JsonObject object = element.getAsJsonObject();
+                String id = object.has("id") && !object.get("id").isJsonNull()
+                        ? object.get("id").getAsString() : "";
+                String key = id.isEmpty() ? object.toString() : id;
+                if (seen.add(key)) output.add(object);
+            }
+        } catch (Exception ignored) {
+            // Ignore an unavailable or malformed optional catalog; keep valid entries.
         }
     }
 
