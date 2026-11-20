@@ -789,6 +789,18 @@ public class VMCreatorActivity extends AppCompatActivity {
                         }
                         if (_addtodrive) {
                             current.itemPath = path;
+                        } else if (getIntent().hasExtra("addromnow")) {
+                            // ROM Store CD-ROM images are copied into this VM's folder.
+                            // Rewrite the QEMU argument from a bare filename to the
+                            // actual copied path; otherwise QEMU looks in its working
+                            // directory and fails with "No such file or directory".
+                            String romFileName = getIntent().getStringExtra("romfilename");
+                            if (romFileName != null && !romFileName.isEmpty()
+                                    && current.itemExtra != null
+                                    && current.itemExtra.contains(romFileName)) {
+                                current.itemExtra = current.itemExtra.replace(
+                                        romFileName, "\"" + path + "\"");
+                            }
                         }
                     });
                 } catch (Exception e) {
