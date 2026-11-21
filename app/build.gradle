@@ -1,3 +1,4 @@
+
 plugins {
     id 'com.android.application'
     id 'com.google.android.gms.oss-licenses-plugin'
@@ -11,9 +12,10 @@ android {
         applicationId "com.niaznix.bytelab"
         minSdk minApi
         targetSdk targetApi
-        // CI supplies a monotonically increasing VERSION_CODE for every build.
-        // Keep 157 as the local-build fallback.
-        versionCode (project.findProperty("VERSION_CODE") ?: "157").toInteger()
+
+        def buildVersionCode = project.findProperty("VERSION_CODE") ?: "157"
+        versionCode = buildVersionCode.toString().toInteger()
+
         versionName "4.5.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
@@ -36,7 +38,6 @@ android {
 
     buildTypes {
         release {
-            // CI release APKs use the same private keystore on every build.
             if (System.getenv("BYTELAB_KEYSTORE_FILE")) {
                 signingConfig signingConfigs.release
             }
@@ -98,15 +99,17 @@ androidComponents {
             def abiFilter = output.filters.find {
                 it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI
             }
+
             if (variant.buildType == 'release') {
                 def abiName = abiFilter?.identifier ?: 'universal'
                 output.outputFileName.set(output.versionCode.map { code ->
                     "vectras-vm-github-${abiName}-${code}.apk".toString()
                 })
             } else if (variant.buildType == 'debug') {
-                // ABI splits are configured globally; keep debug as one universal APK.
                 output.enabled.set(abiFilter == null)
-                if (abiFilter == null) output.outputFileName.set('app-debug.apk')
+                if (abiFilter == null) {
+                    output.outputFileName.set('app-debug.apk')
+                }
             }
         }
     }
@@ -135,7 +138,7 @@ dependencies {
     implementation libs.androidx.core.ktx
     compileOnly project(':shell-loader:stub')
     implementation project(":terminal-view")
-    
+
     // Retrofit
     implementation libs.retrofit
     implementation libs.converter.gson
@@ -143,7 +146,7 @@ dependencies {
     // Glide
     implementation libs.glide
     annotationProcessor libs.compiler
-    
+
     // Test dependencies
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
@@ -167,31 +170,52 @@ afterEvaluate {
             from(project(":shell-loader").layout.buildDirectory.file("outputs/apk/${buildTypeLower}/loader.apk"))
             into(layout.buildDirectory.dir("generated/loaderAssets/${buildTypeLower}/bootstrap"))
         }
+
         tasks.named("merge${buildType}Assets").configure {
             dependsOn(copyLoaderTask, legalAssetsTask)
         }
     }
 
     tasks.register("generatePrefs") {
-        //noinspection UnnecessaryQualifiedReference
-        def xml = groovy.xml.DOMBuilder.parse((new StringReader(file('src/main/res/xml/preferences_x11.xml').text)))
+        def xml = groovy.xml.DOMBuilder.parse(
+            new StringReader(file('src/main/res/xml/preferences_x11.xml').text)
+        )
         def preferenceNodes = xml.documentElement.getElementsByTagName("*")
         def preferences = []
 
         for (int i = 0; i < preferenceNodes.length; i++) {
             def node = preferenceNodes.item(i)
-            if (node.nodeName == 'EditTextPreference' && node.getAttribute("app:key") != "extra_keys_config")
-                preferences << [ type: 'String',  key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue") ]
-            else if (node.nodeName == 'SeekBarPreference')
-                preferences << [ type: 'Int', key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue") ]
-            else if (node.nodeName == 'ListPreference') {
+
+            if (node.nodeName == 'EditTextPreference' && node.getAttribute("app:key") != "extra_keys_config") {
+                preferences << [
+                    type: 'String',
+                    key: node.getAttribute("app:key"),
+                    default: node.getAttribute("app:defaultValue")
+                ]
+            } else if (node.nodeName == 'SeekBarPreference') {
+                preferences << [
+                    type: 'Int',
+                    key: node.getAttribute("app:key"),
+                    default: node.getAttribute("app:defaultValue")
+                ]
+            } else if (node.nodeName == 'ListPreference') {
                 def entries = node.getAttribute("app:entries")
                 def values = node.getAttribute("app:entryValues")
-                preferences << [type: 'List', key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue"),
-                                entries: entries.substring(7, entries.length()), values: values.substring(7, values.length())]
+
+                preferences << [
+                    type: 'List',
+                    key: node.getAttribute("app:key"),
+                    default: node.getAttribute("app:defaultValue"),
+                    entries: entries.substring(7, entries.length()),
+                    values: values.substring(7, values.length())
+                ]
+            } else if (node.nodeName == 'SwitchPreferenceCompat') {
+                preferences << [
+                    type: 'Boolean',
+                    key: node.getAttribute("app:key"),
+                    default: node.getAttribute("app:defaultValue")
+                ]
             }
-            else if (node.nodeName == 'SwitchPreferenceCompat')
-                preferences << [ type: 'Boolean',  key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue") ]
         }
 
         def out = file('build/generated/java/com/vectras/vm/x11/Prefs.java')
@@ -206,17 +230,24 @@ afterEvaluate {
         out << 'import com.vectras.vm.R;\n'
         out << '\n'
         out << 'public class Prefs extends LoriePreferences.PrefsProto {\n'
+
         preferences.each {
-            if (it.type == 'Int' || it.type == 'Boolean')
+            if (it.type == 'Int' || it.type == 'Boolean') {
                 out << "  public final ${it.type}Preference ${it.key} = new ${it.type}Preference(\"${it.key}\", ${it.default});\n"
-            else if (it.type == 'String')
+            } else if (it.type == 'String') {
                 out << "  public final StringPreference ${it.key} = new StringPreference(\"${it.key}\", \"${it.default}\");\n"
-            else if (it.type == 'List')
+            } else if (it.type == 'List') {
                 out << "  public final ${it.type}Preference ${it.key} = new ${it.type}Preference(\"${it.key}\", \"${it.default}\", R.array.${it.entries}, R.array.${it.values});\n"
+            }
         }
+
         out << '  public final StringPreference extra_keys_config = new StringPreference("extra_keys_config", TermuxX11ExtraKeys.DEFAULT_IVALUE_EXTRA_KEYS);\n'
         out << '  public final HashMap<String, Preference> keys = new HashMap<>() {{\n'
-        preferences.each { out << '    put("' + it.key + '", ' + it.key + ');\n' }
+
+        preferences.each {
+            out << '    put("' + it.key + '", ' + it.key + ');\n'
+        }
+
         out << '    put("extra_keys_config", extra_keys_config);\n'
         out << '  }};\n'
         out << '\n'
@@ -225,6 +256,7 @@ afterEvaluate {
         out << '  }\n'
         out << '}\n'
     }
+
     android.sourceSets.main.java.srcDirs += 'build/generated/java'
     preBuild.dependsOn generatePrefs
 
@@ -232,8 +264,9 @@ afterEvaluate {
         def out = file('build/generated/templateRes/xml/shortcuts.xml')
         out.getParentFile().exists() || out.getParentFile().mkdirs()
         out.text = file('src/main/templates/xml/shortcuts.xml').text
-                .replace('@@APPLICATION_ID@@', android.defaultConfig.applicationId)
+            .replace('@@APPLICATION_ID@@', android.defaultConfig.applicationId)
     }
+
     android.sourceSets.main.res.srcDirs += 'build/generated/templateRes'
     preBuild.dependsOn generateShortcuts
 }
