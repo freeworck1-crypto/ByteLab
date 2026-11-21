@@ -633,6 +633,7 @@ public class RomInfo extends AppCompatActivity {
 
         String arch = getIntent().getStringExtra("arch");
         if (arch == null || arch.trim().isEmpty()) arch = "X86_64";
+        final String vmArch = arch;
         String format = getIntent().getStringExtra("romFormat");
         if (format == null || format.trim().isEmpty()) {
             format = downloaded.getName().toLowerCase(Locale.ROOT).endsWith(".img") ? "disk" : "iso";
@@ -691,7 +692,7 @@ public class RomInfo extends AppCompatActivity {
                                 Toast.makeText(RomInfo.this, "Virtual disk creation failed: " + log, Toast.LENGTH_LONG).show();
                                 return;
                             }
-                            createAndStartRomVm(downloaded, vmDisk, vmId, arch);
+                            createAndStartRomVm(downloaded, vmDisk, vmId, vmArch);
                         });
                     }
 
