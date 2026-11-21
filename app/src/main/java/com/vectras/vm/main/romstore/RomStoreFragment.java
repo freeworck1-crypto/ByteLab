@@ -181,6 +181,8 @@ public class RomStoreFragment extends Fragment {
     private void applyFilters() {
         List<DataRoms> filtered = new ArrayList<>();
         for (DataRoms rom : data) {
+            // Entries that have no download source are not shown (no dead "Not uploaded yet" rows).
+            if (rom.romUrl == null || rom.romUrl.trim().isEmpty()) continue;
             String category = categoryOf(rom);
             if (!"all".equals(selectedCategory)
                     && !("other".equals(selectedCategory) ? !category.equals("android")

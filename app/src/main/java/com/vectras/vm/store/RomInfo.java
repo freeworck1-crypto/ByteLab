@@ -1,11 +1,7 @@
 package com.vectras.vm.store;
 
 import android.content.Intent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.IntentFilter;
-import android.app.DownloadManager;
-import android.database.Cursor;
 import android.os.Build;
 import android.os.Environment;
 import android.widget.Toast;
@@ -56,27 +52,9 @@ public class RomInfo extends AppCompatActivity {
     ActivityRomInfoBinding binding;
     public static boolean isFinishNow = false;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private DownloadManager downloadManager;
-    private long activeDownloadId = -1L;
-    private boolean downloadReceiverRegistered = false;
-    private final Handler downloadHandler = new Handler(Looper.getMainLooper());
-    private final Runnable downloadPoller = new Runnable() {
-        @Override public void run() {
-            if (activeDownloadId >= 0) {
-                refreshDownloadState(activeDownloadId);
-                downloadHandler.postDelayed(this, 900);
-            }
-        }
-    };
-    private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
-            long completedId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
-            if (completedId != activeDownloadId || completedId < 0) return;
-            finishRomDownload(completedId);
-        }
-    };
+
+    private final com.vectras.vm.utils.FastDownloader.Listener downloadListener = this::renderDownloadState;
+    private boolean launching = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,8 +64,6 @@ public class RomInfo extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.toolbar);
-        downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-        registerDownloadReceiver();
 
         initialize();
     }
@@ -99,20 +75,26 @@ public class RomInfo extends AppCompatActivity {
             isFinishNow = false;
             return;
         }
+        if (launching) return;
+
         String key = downloadKey();
-        long savedId = getSharedPreferences("rom_store_downloads", MODE_PRIVATE)
-                .getLong("active_download_id_" + key, -1L);
-        String fileName = getIntent().getStringExtra("filename");
-        boolean completed = fileName != null && getSharedPreferences("rom_store_downloads", MODE_PRIVATE)
-                .getBoolean("complete_" + new File(fileName).getName(), false);
-        if (completed) {
+        // A download may still be running in the background; re-attach to it.
+        if (com.vectras.vm.utils.FastDownloader.get().attach(key, downloadListener)) return;
+
+        File target = targetFile();
+        if (isDownloadedFile(target)) {
             showCompletedState();
-        } else if (savedId >= 0) {
-            activeDownloadId = savedId;
-            refreshDownloadState(savedId);
-            downloadHandler.removeCallbacks(downloadPoller);
-            downloadHandler.post(downloadPoller);
+        } else if (target != null && new File(target.getParentFile(), target.getName() + ".part").isFile()) {
+            binding.btnDownload.setText("RESUME");
+            binding.downloadProgressContainer.setVisibility(View.VISIBLE);
+            binding.tvDownloadStatus.setText("Partly downloaded — tap Resume to continue.");
         }
+    }
+
+    public void onDestroy() {
+        com.vectras.vm.utils.FastDownloader.get().detach(downloadKey(), downloadListener);
+        executor.shutdown();
+        super.onDestroy();
     }
 
     private String downloadKey() {
@@ -121,241 +103,51 @@ public class RomInfo extends AppCompatActivity {
         return id == null ? "unknown" : id.replaceAll("[^A-Za-z0-9_-]", "_");
     }
 
+    @Nullable
+    private File targetFile() {
+        String requestedName = getIntent().getStringExtra("filename");
+        File downloads = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (requestedName == null || requestedName.trim().isEmpty() || downloads == null) return null;
+        return new File(downloads, new File(requestedName).getName());
+    }
+
+    /** A finished download is the real file with no ".part" file next to it. */
+    private boolean isDownloadedFile(@Nullable File target) {
+        return target != null && target.isFile() && target.length() > 0
+                && !new File(target.getParentFile(), target.getName() + ".part").exists();
+    }
+
     private void showCompletedState() {
         binding.downloadProgressContainer.setVisibility(View.VISIBLE);
+        binding.progressDownload.setIndeterminate(false);
         binding.progressDownload.setProgress(100);
-        binding.tvDownloadStatus.setText("Download complete — ready to import");
+        binding.tvDownloadStatus.setText("Download complete — tap Run to start");
         binding.btnDownload.setEnabled(true);
         binding.btnDownload.setText(getIntent().getBooleanExtra("romApp", false) ? "INSTALL" : "RUN");
     }
 
-    private void refreshDownloadState(long downloadId) {
-        if (downloadManager == null || isFinishing() || isDestroyed()) return;
-        Cursor cursor = null;
-        try {
-            cursor = downloadManager.query(new DownloadManager.Query().setFilterById(downloadId));
-            if (cursor == null || !cursor.moveToFirst()) return;
-            int statusCol = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-            int reasonCol = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
-            int soFarCol = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
-            int totalCol = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
-            int status = statusCol >= 0 ? cursor.getInt(statusCol) : -1;
-            long soFar = soFarCol >= 0 ? cursor.getLong(soFarCol) : 0;
-            long total = totalCol >= 0 ? cursor.getLong(totalCol) : -1;
-            binding.downloadProgressContainer.setVisibility(View.VISIBLE);
-            binding.btnDownload.setEnabled(false);
-            if (status == DownloadManager.STATUS_PENDING) {
-                binding.btnDownload.setText("WAITING");
-                binding.progressDownload.setIndeterminate(true);
-                binding.tvDownloadStatus.setText("Waiting to start…");
-            } else if (status == DownloadManager.STATUS_RUNNING) {
-                binding.btnDownload.setText("DOWNLOADING");
-                binding.progressDownload.setIndeterminate(false);
-                int percent = total > 0 ? (int) Math.min(100, (soFar * 100L) / total) : 0;
-                binding.progressDownload.setProgress(percent);
-                binding.tvDownloadStatus.setText(total > 0
-                        ? percent + "%  •  " + android.text.format.Formatter.formatFileSize(this, soFar)
-                            + " / " + android.text.format.Formatter.formatFileSize(this, total)
-                        : android.text.format.Formatter.formatFileSize(this, soFar) + " downloaded");
-            } else if (status == DownloadManager.STATUS_PAUSED) {
-                int reason = reasonCol >= 0 ? cursor.getInt(reasonCol) : -1;
-                binding.btnDownload.setText("WAITING");
-                binding.progressDownload.setIndeterminate(true);
-                binding.tvDownloadStatus.setText(reason == DownloadManager.PAUSED_WAITING_FOR_NETWORK
-                        || reason == DownloadManager.PAUSED_QUEUED_FOR_WIFI
-                        ? "Waiting for internet connection… Download will resume automatically."
-                        : "Download paused. Waiting to resume…");
-            } else if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                finishRomDownload(downloadId);
-            } else if (status == DownloadManager.STATUS_FAILED) {
-                int reason = reasonCol >= 0 ? cursor.getInt(reasonCol) : -1;
-                downloadHandler.removeCallbacks(downloadPoller);
-                activeDownloadId = -1L;
-                getSharedPreferences("rom_store_downloads", MODE_PRIVATE).edit()
-                        .remove("active_download_id_" + downloadKey()).remove("active_filename").apply();
-                binding.btnDownload.setEnabled(true);
-                binding.btnDownload.setText("RETRY");
-                binding.progressDownload.setIndeterminate(false);
-                binding.tvDownloadStatus.setText("Download failed (" + reason + "). Tap Retry.");
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (cursor != null) cursor.close();
+    private void onDownloadButton() {
+        String key = downloadKey();
+        if (com.vectras.vm.utils.FastDownloader.get().isActive(key)) {
+            com.vectras.vm.utils.FastDownloader.get().cancel(key); // pause; partial data is kept
+            return;
         }
-    }
-
-    private void checkPendingDownload(long downloadId) {
-        if (downloadManager == null) return;
-        DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
-        Cursor cursor = null;
-        try {
-            cursor = downloadManager.query(query);
-            if (cursor == null || !cursor.moveToFirst()) return;
-            int index = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-            if (index < 0) return;
-            int status = cursor.getInt(index);
-            if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
-                finishRomDownload(downloadId);
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (cursor != null) cursor.close();
+        File target = targetFile();
+        if (isDownloadedFile(target)) {
+            if (getIntent().getBooleanExtra("romApp", false)) installDownloadedApk(target);
+            else launchDownloadedRom(target);
+        } else {
+            download();
         }
-    }
-
-    public void onDestroy() {
-        if (downloadReceiverRegistered) {
-            try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) { }
-            downloadReceiverRegistered = false;
-        }
-        downloadHandler.removeCallbacks(downloadPoller);
-        executor.shutdown();
-        super.onDestroy();
-    }
-
-    private void registerDownloadReceiver() {
-        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-        try {
-            if (Build.VERSION.SDK_INT >= 33) {
-                registerReceiver(downloadReceiver, filter, Context.RECEIVER_EXPORTED);
-            } else {
-                registerReceiver(downloadReceiver, filter);
-            }
-            downloadReceiverRegistered = true;
-        } catch (Exception ignored) {
-            downloadReceiverRegistered = false;
-        }
-    }
-
-    private final ActivityResultLauncher<String> romPicker =
-            registerForActivityResult(new ActivityResultContracts.GetContent(), this::handlePickedRom);
-
-    public void handlePickedRom(Uri uri) {
-        if (uri == null) return;
-
-        executor.execute(() -> {
-            String filePath;
-            try {
-                File selectedFilePath = new File(getPath(uri));
-                filePath = selectedFilePath.getPath();
-            } catch (Exception e) {
-                filePath = "";
-            }
-
-            String selectedFileName = FileUtils.getFileNameFromUri(this, uri);
-
-            if (isFinishing() || isDestroyed()) return;
-
-            String finalFilePath = filePath;
-            runOnUiThread(() -> {
-                if (selectedFileName.equals(getIntent().getStringExtra("filename")) ||
-                        (selectedFileName.endsWith(".cvbi.zip") && selectedFileName.equals(getIntent().getStringExtra("filename") + ".zip"))) {
-                    Intent intent = new Intent();
-
-                    if (getIntent().hasExtra("icon") &&
-                            !Objects.requireNonNull(getIntent().getStringExtra("icon")).isEmpty() &&
-                            (!selectedFileName.endsWith(".cvbi")
-                                    || !selectedFileName.endsWith(".cvbi.zip"))) {
-
-                        Glide.with(this)
-                                .asBitmap()
-                                .load(getIntent().getStringExtra("icon"))
-                                .into(new CustomTarget<Bitmap>() {
-                                    @Override
-                                    public void onResourceReady(@NonNull Bitmap resource,
-                                                                @Nullable Transition<? super Bitmap> transition) {
-                                        File cacheDir = getExternalCacheDir();
-
-                                        if (cacheDir != null)
-                                            ImageUtils.saveBitmapToPNGFile(resource, cacheDir.getAbsolutePath(), "thumbnail.png");
-
-                                        intent.putExtra("romicon", cacheDir != null ? cacheDir.getAbsolutePath() + "/thumbnail.png" : "");
-                                    }
-
-                                    @Override
-                                    public void onLoadCleared(@Nullable Drawable placeholder) {
-                                        intent.putExtra("romicon", "");
-                                    }
-                                });
-                    } else {
-                        intent.putExtra("romicon", "");
-                    }
-
-                    intent.setClass(getApplicationContext(), VMCreatorActivity.class);
-                    intent.putExtra("addromnow", "");
-                    intent.putExtra("romname", getIntent().getStringExtra("title"));
-                    intent.putExtra("romfilename", getIntent().getStringExtra("filename"));
-                    intent.putExtra("finalromfilename", getIntent().getStringExtra("finalromfilename"));
-                    intent.putExtra("rompath", finalFilePath);
-                    intent.putExtra("romuri", uri.toString());
-                    if (Objects.requireNonNull(getIntent().getStringExtra("extra")).contains(selectedFileName)) {
-                        intent.putExtra("addtodrive", "");
-                        intent.putExtra("romextra", getIntent().getStringExtra("extra"));
-                    } else {
-                        intent.putExtra("addtodrive", "1");
-                        intent.putExtra("romextra", getIntent().getStringExtra("extra"));
-                    }
-
-                    VMManager.setArch(getIntent().hasExtra("arch") && getIntent().getStringExtra("arch") != null ? Objects.requireNonNull(getIntent().getStringExtra("arch")) : "", this);
-
-                    startActivity(intent);
-                } else {
-                    DialogUtils.oneDialog(RomInfo.this,
-                            getString(R.string.problem_has_been_detected),
-                            getString(R.string.please_select) + " " + getIntent().getStringExtra("filename"),
-                            getString(R.string.ok),
-                            true, R.drawable.warning_48px,
-                            true,
-                            null,
-                            null);
-                }
-            });
-        });
-    }
-
-    public String getPath(Uri uri) {
-        return FileUtils.getPath(RomInfo.this, uri);
     }
 
     private void initialize() {
         binding.toolbar.setNavigationOnClickListener(v -> finish());
 
-        binding.btnDownload.setOnClickListener(v -> {
-            String filename = getIntent().getStringExtra("filename");
-            boolean complete = filename != null && getSharedPreferences("rom_store_downloads", MODE_PRIVATE)
-                    .getBoolean("complete_" + new File(filename).getName(), false);
-            if (complete) {
-                if (getIntent().getBooleanExtra("romApp", false)) {
-                    File folder = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                    if (folder != null) installDownloadedApk(new File(folder, new File(filename).getName()));
-                } else {
-                    File folder = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                    if (folder != null) launchDownloadedRom(new File(folder, new File(filename).getName()));
-                }
-            } else {
-                download();
-            }
-        });
+        binding.btnDownload.setOnClickListener(v -> onDownloadButton());
 
-        if (getIntent().hasExtra("isRomInfo") && getIntent().getBooleanExtra("isRomInfo", false)) {
-            if (getIntent().getBooleanExtra("romApp", false)) {
-                binding.btnPick.setVisibility(View.GONE);
-            }
-            binding.btnPick.setOnClickListener(v -> {
-                try {
-                    if (MainSettingsManager.getBuiltInFilePicker(this)) {
-                        FilePickerDialog filePickerDialog = new FilePickerDialog();
-                        filePickerDialog.pick(this, filePickerDialog.ROM_FILE, (path -> handlePickedRom(Uri.fromFile(new File(path)))));
-                    } else {
-                        romPicker.launch("*/*");
-                    }
-                } catch (Exception e) {
-                    IntentUtils.showErrorDialog(this);
-                }
-            });
-        } else {
-            binding.btnPick.setVisibility(View.GONE);
-        }
+        // Importing a file is done from the "+" button on the home screen, not from the store.
+        binding.btnPick.setVisibility(View.GONE);
 
         if (getIntent().hasExtra("title")) {
             binding.textName.setText(getIntent().getStringExtra("title"));
@@ -369,8 +161,8 @@ public class RomInfo extends AppCompatActivity {
             String description = getIntent().getStringExtra("desc");
             boolean rootSupported = getIntent().getBooleanExtra("rootSupported", false);
             String rootStatus = rootSupported
-                    ? "\\n\\nGuest root: This image is marked as root-enabled."
-                    : "\\n\\nGuest root: Not included in this image. Root access depends on the guest OS image.";
+                    ? "\n\nRoot: available inside this virtual machine only. After it starts, long-press it on the home screen and choose \"Root (guest only)\". Your real phone is never rooted."
+                    : "\n\nRoot: can be enabled for this virtual machine only (long-press it on the home screen → Root (guest only)). Your real phone is never rooted.";
             binding.descTxt.setText((description == null ? "" : description) + rootStatus);
         }
 
@@ -481,144 +273,94 @@ public class RomInfo extends AppCompatActivity {
         boolean isApp = getIntent().getBooleanExtra("romApp", false);
         boolean isDirect = getIntent().getBooleanExtra("directDownload", false) || isApp;
 
-        // Web pages (for example Microsoft's ISO selector) are not direct files.
-        // Keep their official page flow instead of silently saving an HTML page as an ISO.
+        // Web pages (for example Microsoft's ISO selector) are not direct files:
+        // open the official page instead of saving an HTML page as an ISO.
         if (!isDirect) {
+            if (url == null || url.trim().isEmpty()) {
+                Toast.makeText(this, "This image has no download link yet.", Toast.LENGTH_LONG).show();
+                return;
+            }
             IntentUtils.openUrl(this, url);
             return;
         }
 
-        String requestedName = getIntent().getStringExtra("filename");
-        if (url == null || requestedName == null || requestedName.trim().isEmpty()) {
+        File destination = targetFile();
+        if (url == null || url.trim().isEmpty() || destination == null) {
             Toast.makeText(this, "Download information is incomplete.", Toast.LENGTH_LONG).show();
             return;
         }
-        String fileName = new File(requestedName).getName();
-        File downloads = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-        if (downloads == null) {
-            Toast.makeText(this, "Download storage is unavailable.", Toast.LENGTH_LONG).show();
-            return;
-        }
-        if (!downloads.exists() && !downloads.mkdirs()) {
+        File downloads = destination.getParentFile();
+        if (downloads != null && !downloads.exists() && !downloads.mkdirs()) {
             Toast.makeText(this, "Could not create download folder.", Toast.LENGTH_LONG).show();
             return;
         }
-        File destination = new File(downloads, fileName);
-        long existingId = getSharedPreferences("rom_store_downloads", MODE_PRIVATE)
-                .getLong("active_download_id_" + downloadKey(), -1L);
-        if (existingId >= 0) {
-            activeDownloadId = existingId;
-            refreshDownloadState(existingId);
-            downloadHandler.removeCallbacks(downloadPoller);
-            downloadHandler.post(downloadPoller);
+
+        Uri parsed = Uri.parse(url);
+        String scheme = parsed.getScheme();
+        if (!("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
+            Toast.makeText(this, "This download link is not supported.", Toast.LENGTH_LONG).show();
             return;
         }
 
-        // If the file was already downloaded, continue straight to import/install.
-        boolean completedBefore = getSharedPreferences("rom_store_downloads", MODE_PRIVATE)
-                .getBoolean("complete_" + fileName, false);
-        if (completedBefore && destination.isFile() && destination.length() > 0) {
-            showCompletedState();
-            return;
-        }
-        if (destination.exists()) destination.delete();
+        String[] mirrors = getIntent().getStringArrayExtra("mirrors");
+        String[] urls = new String[1 + (mirrors == null ? 0 : mirrors.length)];
+        urls[0] = url;
+        if (mirrors != null) System.arraycopy(mirrors, 0, urls, 1, mirrors.length);
 
-        try {
-            Uri parsed = Uri.parse(url);
-            String scheme = parsed.getScheme();
-            if (!("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
-                Toast.makeText(this, "This download link is not supported.", Toast.LENGTH_LONG).show();
-                return;
-            }
-            DownloadManager.Request request = new DownloadManager.Request(parsed);
-            request.setTitle(getIntent().getStringExtra("title"));
-            request.setDescription("Downloading OS image for ByteLab");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setAllowedOverMetered(true);
-            request.setAllowedOverRoaming(true);
-            request.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName);
-            activeDownloadId = downloadManager.enqueue(request);
-            getSharedPreferences("rom_store_downloads", MODE_PRIVATE).edit()
-                    .putLong("active_download_id_" + downloadKey(), activeDownloadId)
-                    .putString("active_filename", fileName)
-                    .putBoolean("complete_" + fileName, false)
-                    .apply();
-            binding.downloadProgressContainer.setVisibility(View.VISIBLE);
-            binding.btnDownload.setEnabled(false);
-            binding.btnDownload.setText("DOWNLOADING");
-            binding.progressDownload.setIndeterminate(true);
-            binding.tvDownloadStatus.setText("Connecting to download server…");
-            downloadHandler.removeCallbacks(downloadPoller);
-            downloadHandler.post(downloadPoller);
-            Toast.makeText(this, "Download started.", Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            binding.btnDownload.setEnabled(true);
-            binding.btnDownload.setText(R.string.getit);
-            Toast.makeText(this, "Could not start download: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+        getSharedPreferences("rom_store_downloads", MODE_PRIVATE).edit()
+                .putBoolean("complete_" + destination.getName(), false).apply();
+
+        binding.downloadProgressContainer.setVisibility(View.VISIBLE);
+        binding.btnDownload.setText("PAUSE");
+        binding.progressDownload.setIndeterminate(true);
+        binding.tvDownloadStatus.setText("Connecting to download server…");
+        com.vectras.vm.utils.FastDownloader.get().start(downloadKey(), urls, destination, downloadListener);
     }
 
-    private void finishRomDownload(long downloadId) {
-        DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
-        Cursor cursor = null;
-        try {
-            cursor = downloadManager.query(query);
-            if (cursor == null || !cursor.moveToFirst()) return;
-            int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-            int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
-            int status = statusIndex >= 0 ? cursor.getInt(statusIndex) : -1;
-            if (status != DownloadManager.STATUS_SUCCESSFUL) {
-                if (status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PAUSED) return;
-                int reason = reasonIndex >= 0 ? cursor.getInt(reasonIndex) : -1;
-                downloadHandler.removeCallbacks(downloadPoller);
-                activeDownloadId = -1L;
+    private void renderDownloadState(com.vectras.vm.utils.FastDownloader.State s) {
+        if (isFinishing() || isDestroyed() || binding == null) return;
+        binding.downloadProgressContainer.setVisibility(View.VISIBLE);
+        binding.btnDownload.setEnabled(true);
+
+        if (s.finished) {
+            File downloaded = s.file != null ? s.file : targetFile();
+            if (downloaded != null) {
                 getSharedPreferences("rom_store_downloads", MODE_PRIVATE).edit()
-                        .remove("active_download_id_" + downloadKey()).remove("active_filename").apply();
-                Toast.makeText(this, "Download failed (code " + reason + "). Please try again.", Toast.LENGTH_LONG).show();
-                binding.btnDownload.setEnabled(true);
-                binding.btnDownload.setText("RETRY");
-                binding.tvDownloadStatus.setText("Download failed. Tap Retry.");
-                return;
+                        .putBoolean("complete_" + downloaded.getName(), true).apply();
             }
-            String requestedName = getIntent().getStringExtra("filename");
-            File downloads = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-            File downloaded = downloads == null || requestedName == null ? null
-                    : new File(downloads, new File(requestedName).getName());
-            if (downloaded == null || !downloaded.isFile() || downloaded.length() == 0) {
-                Toast.makeText(this, "The downloaded file could not be found.", Toast.LENGTH_LONG).show();
-                binding.btnDownload.setEnabled(true);
-                binding.btnDownload.setText("RETRY");
-                binding.tvDownloadStatus.setText("Download failed. Tap Retry.");
-                return;
-            }
-            downloadHandler.removeCallbacks(downloadPoller);
-            activeDownloadId = -1L;
-            getSharedPreferences("rom_store_downloads", MODE_PRIVATE).edit()
-                    .remove("active_download_id_" + downloadKey()).remove("active_filename")
-                    .putBoolean("complete_" + new File(requestedName).getName(), true)
-                    .apply();
-            downloadHandler.removeCallbacks(downloadPoller);
-            binding.btnDownload.setEnabled(true);
-            binding.btnDownload.setText(getIntent().getBooleanExtra("romApp", false) ? "INSTALL" : "RUN");
-            binding.downloadProgressContainer.setVisibility(View.VISIBLE);
+            com.vectras.vm.utils.FastDownloader.get().detach(downloadKey(), downloadListener);
             binding.progressDownload.setIndeterminate(false);
             binding.progressDownload.setProgress(100);
-            binding.tvDownloadStatus.setText("Download complete — preparing virtual machine…");
-
-            if (getIntent().getBooleanExtra("romApp", false)) {
+            boolean isApp = getIntent().getBooleanExtra("romApp", false);
+            binding.btnDownload.setText(isApp ? "INSTALL" : "RUN");
+            if (isApp) {
                 binding.tvDownloadStatus.setText("Download complete — ready to install");
-                Toast.makeText(this, "Download complete. Tap Install.", Toast.LENGTH_LONG).show();
             } else {
-                // No picker, import screen, or manual file copy: attach the downloaded
-                // ISO as a virtual CD-ROM and start a new VM automatically.
+                binding.tvDownloadStatus.setText("Download complete — starting virtual machine…");
                 launchDownloadedRom(downloaded);
             }
-        } catch (Exception e) {
-            binding.btnDownload.setEnabled(true);
-            binding.btnDownload.setText(R.string.getit);
-            Toast.makeText(this, "Could not finish download: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        } finally {
-            if (cursor != null) cursor.close();
+        } else if (s.failed) {
+            binding.progressDownload.setIndeterminate(false);
+            binding.btnDownload.setText("RESUME");
+            binding.tvDownloadStatus.setText(s.message);
+        } else if (s.cancelled) {
+            binding.progressDownload.setIndeterminate(false);
+            binding.btnDownload.setText("RESUME");
+            binding.tvDownloadStatus.setText("Paused at " + s.percent() + "% — tap Resume to continue.");
+        } else {
+            binding.btnDownload.setText("PAUSE");
+            if (s.total > 0 && s.done > 0) {
+                binding.progressDownload.setIndeterminate(false);
+                binding.progressDownload.setProgress(s.percent());
+                String speed = com.vectras.vm.utils.FastDownloader.speedText(s.bytesPerSecond);
+                binding.tvDownloadStatus.setText(s.percent() + "%  •  "
+                        + android.text.format.Formatter.formatFileSize(this, s.done) + " / "
+                        + android.text.format.Formatter.formatFileSize(this, s.total)
+                        + (speed.isEmpty() ? "" : "  •  " + speed));
+            } else {
+                binding.progressDownload.setIndeterminate(true);
+                binding.tvDownloadStatus.setText(s.message);
+            }
         }
     }
 
@@ -716,7 +458,7 @@ public class RomInfo extends AppCompatActivity {
         config.itemArch = arch;
         config.itemPath = vmDisk == null ? downloaded.getAbsolutePath() : vmDisk.getAbsolutePath();
         config.imgCdrom = vmDisk == null ? "" : downloaded.getAbsolutePath();
-        config.itemExtra = vmDisk == null ? "" : "-boot order=dc -vga std";
+        config.itemExtra = vmDisk == null ? "" : "-boot order=cd -vga std";
         config.memory = getIntent().getStringExtra("romCategory") != null
                 && "windows".equalsIgnoreCase(getIntent().getStringExtra("romCategory")) ? 4096 : 2048;
         config.cores = 1;
@@ -725,12 +467,14 @@ public class RomInfo extends AppCompatActivity {
         config.soundCard = 2;
         config.accel = DeviceUtils.is64bit() ? 2 : 1;
         config.qmpPort = VMManager.startRandomPort();
+        launching = true;
 
         if (!FileUtils.isFileExists(AppConfig.romsdatajson)) {
             FileUtils.writeToFile(AppConfig.maindirpath, "roms-data.json", "[]");
         }
 
         if (!VMManager.addVM(config, -1)) {
+            launching = false;
             binding.btnDownload.setEnabled(true);
             binding.btnDownload.setText("RUN");
             binding.tvDownloadStatus.setText("Could not register this virtual machine.");
