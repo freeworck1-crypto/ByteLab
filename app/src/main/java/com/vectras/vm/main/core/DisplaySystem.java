@@ -22,6 +22,7 @@ import com.vectras.vm.setupwizard.SetupFeatureCore;
 import com.vectras.vm.utils.DialogUtils;
 import com.vectras.vm.utils.FileUtils;
 import com.vectras.vm.utils.PackageUtils;
+import com.vectras.vm.x11.AndroidMode;
 import com.vectras.vm.x11.X11Activity;
 import com.vectras.vterm.Terminal2;
 
@@ -134,6 +135,8 @@ public class DisplaySystem {
 
                     startTermuxX11(context);
                 } else {
+                    // Android phones: full screen + direct touch before the screen opens.
+                    AndroidMode.prepare(context);
                     Intent intent = new Intent();
                     intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                     intent.setClass(context, X11Activity.class);

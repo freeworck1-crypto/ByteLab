@@ -86,6 +86,8 @@ public class AddIn {
         initializeDesktopControl();
         initializeGameControl();
         initializeBubble();
+        applyCustomization();
+        AndroidMode.attachSwipeBridge(activity);
         startVM();
     }
 
@@ -95,6 +97,7 @@ public class AddIn {
                     public void onStarted(int statusCode, String message) {
                         MainStartVM.dismissDialog();
                         setupSound();
+                        AndroidMode.onVmStarted(activity);
                     }
 
                     @Override
@@ -107,6 +110,12 @@ public class AddIn {
     }
 
     public void initializeControlMode() {
+        if (AndroidMode.isActive(activity)) {
+            // Android phone: every key group is switched on/off by applyCustomization().
+            bindingControls.desktop.setVisibility(View.VISIBLE);
+            bindingControls.gamepad.setVisibility(View.GONE);
+            return;
+        }
         if (Objects.equals(MainSettingsManager.getControlMode(activity), "D")) {
             bindingControls.desktop.setVisibility(View.VISIBLE);
             bindingControls.gamepad.setVisibility(View.GONE);
@@ -121,24 +130,6 @@ public class AddIn {
 
     public void initializeMenuBar() {
         bindingControls.btnFit.setVisibility(View.GONE);
-//        final boolean[] isFullScreen = {false};
-//        bindingControls.btnFit.setOnClickListener(view -> {
-//            sendKey(KEYCODE_CTRL_LEFT, false);
-//            sendKey(KEYCODE_ALT_LEFT, false);
-//            sendKey(KEYCODE_F, false);
-//            sendKey(KEYCODE_CTRL_LEFT, true);
-//            sendKey(KEYCODE_ALT_LEFT, true);
-//            sendKey(KEYCODE_F, true);
-//
-//            if (isFullScreen[0]) {
-//                bindingControls.btnFit.setImageDrawable(AppCompatResources.getDrawable(activity, R.drawable.close_fullscreen_24px));
-//                isFullScreen[0] = false;
-//            } else {
-//                bindingControls.btnFit.setImageDrawable(AppCompatResources.getDrawable(activity, R.drawable.open_in_full_24px));
-//                isFullScreen[0] = true;
-//            }
-//        });
-
         bindingControls.btnVterm.setOnClickListener(v -> {
             FragmentTransaction ft = activity.getSupportFragmentManager().beginTransaction();
             // Create and show the dialog.
@@ -170,57 +161,53 @@ public class AddIn {
         });
 
 
+        bindingControls.btnMode.setOnLongClickListener(v -> {
+            AndroidMode.showCustomizeDialog(activity, this::applyCustomization);
+            return true;
+        });
+
         bindingControls.btnSettings
                 .setOnClickListener((l) -> activity.startActivity(new Intent(activity, LoriePreferences.class) {{ setAction(Intent.ACTION_MAIN); }}));
 
         bindingControls.btnVmManager.setOnClickListener(v -> vmController());
 
         bindingControls.btnQmp.setVisibility(View.GONE);
-//        bindingControls.btnQmp.setOnClickListener(v -> {
-//                if (monitorMode) {
-//                    onVNC();
-//                    qmpBtn.setImageDrawable(getResources().getDrawable(R.drawable.round_terminal_24));
-//                } else {
-//                    onMonitor();
-//                    qmpBtn.setImageDrawable(getResources().getDrawable(R.drawable.round_computer_24));
-//                }
-//        });
+    }
 
-        //        bindingControls.btnPrograms.setOnClickListener(v -> {
-//            Dialog dialog = new Dialog(this);
-//            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-//            dialog.setContentView(R.layout.dialog_programs);
-//            Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawableResource(android.R.color.transparent);
-//
-//            WindowManager.LayoutParams layoutParams = dialog.getWindow().getAttributes();
-//            layoutParams.alpha = 1f;
-//            dialog.getWindow().setAttributes(layoutParams);
-//
-//            ImageButton termBtn = dialog.findViewById(R.id.btnTerminal);
-//            ImageButton vkCubeBtn = dialog.findViewById(R.id.btnVkCube);
-//            ImageButton glxGearsBtn = dialog.findViewById(R.id.btnGlxGears);
-//
-//            termBtn.setOnClickListener(v1 -> {
-//                new Terminal(this).executeShellCommand2("xfce4-terminal", false, this);
-//                dialog.dismiss();
-//            });
-//
-//            glxGearsBtn.setOnClickListener(v1 -> {
-//                new Terminal(this).executeShellCommand2("glxgears", false, this);
-//                dialog.dismiss();
-//            });
-//
-//            vkCubeBtn.setOnClickListener(v1 -> {
-//                new Terminal(this).executeShellCommand2("vkcube", false, this);
-//                dialog.dismiss();
-//            });
-//
-//            try {
-//                dialog.show();
-//            } catch (WindowManager.BadTokenException e) {
-//                Log.e(TAG, "Failed to show dialog", e);
-//            }
-//        });
+    /** Shows or hides every on-screen control group according to the user's switches. */
+    public void applyCustomization() {
+        boolean android = AndroidMode.isActive(activity);
+
+        if (android) {
+            bindingControls.desktop.setVisibility(View.VISIBLE);
+            bindingControls.gamepad.setVisibility(View.GONE);
+        } else {
+            initializeControlMode();
+        }
+
+        setVisible(bindingDesktopControls.dpad, AndroidMode.get(activity, AndroidMode.ARROWS));
+        View funcColumn = (View) bindingDesktopControls.escBtn.getParent();
+        setVisible(funcColumn, AndroidMode.get(activity, AndroidMode.FUNC_KEYS));
+        setVisible(bindingDesktopControls.tabBtn, AndroidMode.get(activity, AndroidMode.TAB));
+        setVisible(bindingDesktopControls.winBtn, AndroidMode.get(activity, AndroidMode.WIN));
+        setVisible(bindingDesktopControls.clickBtns, AndroidMode.get(activity, AndroidMode.MOUSE));
+
+        boolean toolbar = !android || AndroidMode.get(activity, AndroidMode.TOOLBAR);
+        showToolbar(toolbar);
+    }
+
+    private void setVisible(View v, boolean visible) {
+        v.setVisibility(visible ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean toolbarPinned() {
+        return !AndroidMode.isActive(activity) || AndroidMode.get(activity, AndroidMode.TOOLBAR);
+    }
+
+    /** Top toolbar visible, or hidden behind the small floating button. */
+    private void showToolbar(boolean show) {
+        bindingControls.lnToolBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        binding.lnBubbleContainer.setVisibility(show ? View.GONE : View.VISIBLE);
     }
 
     public boolean ctrlClicked = false;
@@ -358,8 +345,8 @@ public class AddIn {
         bindingDesktopControls.winBtn.setOnClickListener(v -> {
             sendKey(KEYCODE_CTRL_LEFT, false);
             sendKey(KEYCODE_ESCAPE, false);
-            sendKey(KEYCODE_CTRL_LEFT, false);
-            sendKey(KEYCODE_ESCAPE, false);
+            sendKey(KEYCODE_ESCAPE, true);
+            sendKey(KEYCODE_CTRL_LEFT, true);
         });
 
         bindingDesktopControls.ctrlaltdelBtn.setVisibility(View.GONE);
@@ -443,6 +430,7 @@ public class AddIn {
         DynamicBubble dynamicBubble = new DynamicBubble(binding.lnBubbleContainer, binding.btnBubble);
         dynamicBubble.onClicked(() -> {
             bindingControls.mainControl.setVisibility(View.VISIBLE);
+            bindingControls.lnToolBar.setVisibility(View.VISIBLE);
             binding.lnBubbleContainer.setVisibility(View.GONE);
         });
     }
@@ -562,6 +550,16 @@ public class AddIn {
     }
 
     public void handleOnBack() {
+        if (AndroidMode.isActive(activity)) {
+            // Back inside an Android phone = Back of the virtual phone.
+            if (!toolbarPinned() && bindingControls.lnToolBar.getVisibility() == View.VISIBLE) {
+                showToolbar(false);
+            } else {
+                AndroidMode.sendGuestKey(AndroidMode.KEY_BACK);
+            }
+            return;
+        }
+
         if (bindingControls.mainControl.getVisibility() == View.GONE && !SettingsData.x11Bubble(activity)) {
             bindingControls.mainControl.setVisibility(View.VISIBLE);
         } else {
