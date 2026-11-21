@@ -24,13 +24,20 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.gson.Gson;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.vectras.qemu.MainSettingsManager;
+import com.vectras.vm.AppConfig;
 import com.vectras.vm.ImagePrvActivity;
 import com.vectras.vm.R;
 import com.vectras.vm.VMManager;
+import com.vectras.vm.main.core.MainStartVM;
+import com.vectras.vm.main.vms.DataMainRoms;
+import com.vectras.vm.manager.VmFileManager;
+import com.vectras.vterm.Terminal2;
+import com.vectras.vm.utils.DeviceUtils;
 import com.vectras.vm.creator.VMCreatorActivity;
 import com.vectras.vm.databinding.ActivityRomInfoBinding;
 import com.vectras.vm.file.FilePickerDialog;
@@ -119,7 +126,7 @@ public class RomInfo extends AppCompatActivity {
         binding.progressDownload.setProgress(100);
         binding.tvDownloadStatus.setText("Download complete — ready to import");
         binding.btnDownload.setEnabled(true);
-        binding.btnDownload.setText(getIntent().getBooleanExtra("romApp", false) ? "INSTALL" : "IMPORT");
+        binding.btnDownload.setText(getIntent().getBooleanExtra("romApp", false) ? "INSTALL" : "RUN");
     }
 
     private void refreshDownloadState(long downloadId) {
@@ -323,7 +330,7 @@ public class RomInfo extends AppCompatActivity {
                     if (folder != null) installDownloadedApk(new File(folder, new File(filename).getName()));
                 } else {
                     File folder = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                    if (folder != null) handlePickedRom(Uri.fromFile(new File(folder, new File(filename).getName())));
+                    if (folder != null) launchDownloadedRom(new File(folder, new File(filename).getName()));
                 }
             } else {
                 download();
@@ -359,7 +366,12 @@ public class RomInfo extends AppCompatActivity {
         }
 
         if (getIntent().hasExtra("desc")) {
-            binding.descTxt.setText(getIntent().getStringExtra("desc"));
+            String description = getIntent().getStringExtra("desc");
+            boolean rootSupported = getIntent().getBooleanExtra("rootSupported", false);
+            String rootStatus = rootSupported
+                    ? "\\n\\nGuest root: This image is marked as root-enabled."
+                    : "\\n\\nGuest root: Not included in this image. Root access depends on the guest OS image.";
+            binding.descTxt.setText((description == null ? "" : description) + rootStatus);
         }
 
         if (getIntent().hasExtra("icon")) {
@@ -587,12 +599,20 @@ public class RomInfo extends AppCompatActivity {
                     .apply();
             downloadHandler.removeCallbacks(downloadPoller);
             binding.btnDownload.setEnabled(true);
-            binding.btnDownload.setText(getIntent().getBooleanExtra("romApp", false) ? "INSTALL" : "IMPORT");
+            binding.btnDownload.setText(getIntent().getBooleanExtra("romApp", false) ? "INSTALL" : "RUN");
             binding.downloadProgressContainer.setVisibility(View.VISIBLE);
             binding.progressDownload.setIndeterminate(false);
             binding.progressDownload.setProgress(100);
-            binding.tvDownloadStatus.setText("Download complete — ready");
-            Toast.makeText(this, "Download complete. Tap Import to add this OS to ByteLab.", Toast.LENGTH_LONG).show();
+            binding.tvDownloadStatus.setText("Download complete — preparing virtual machine…");
+
+            if (getIntent().getBooleanExtra("romApp", false)) {
+                binding.tvDownloadStatus.setText("Download complete — ready to install");
+                Toast.makeText(this, "Download complete. Tap Install.", Toast.LENGTH_LONG).show();
+            } else {
+                // No picker, import screen, or manual file copy: attach the downloaded
+                // ISO as a virtual CD-ROM and start a new VM automatically.
+                launchDownloadedRom(downloaded);
+            }
         } catch (Exception e) {
             binding.btnDownload.setEnabled(true);
             binding.btnDownload.setText(R.string.getit);
@@ -600,6 +620,129 @@ public class RomInfo extends AppCompatActivity {
         } finally {
             if (cursor != null) cursor.close();
         }
+    }
+
+    private void launchDownloadedRom(File downloaded) {
+        if (downloaded == null || !downloaded.isFile() || downloaded.length() <= 0) {
+            binding.btnDownload.setEnabled(true);
+            binding.btnDownload.setText("RETRY");
+            binding.tvDownloadStatus.setText("Downloaded file not found. Tap Retry.");
+            Toast.makeText(this, "ByteLab could not find the downloaded image.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String arch = getIntent().getStringExtra("arch");
+        if (arch == null || arch.trim().isEmpty()) arch = "X86_64";
+        String format = getIntent().getStringExtra("romFormat");
+        if (format == null || format.trim().isEmpty()) {
+            format = downloaded.getName().toLowerCase(Locale.ROOT).endsWith(".img") ? "disk" : "iso";
+        }
+
+        String savedVmId = getSharedPreferences("rom_store_downloads", MODE_PRIVATE)
+                .getString("vm_id_" + downloadKey(), "");
+        if (!savedVmId.isEmpty() && VMManager.isVMExist(savedVmId)) {
+            try {
+                DataMainRoms existing = new Gson().fromJson(
+                        FileUtils.readAFile(VmFileManager.getConfigFile(savedVmId)),
+                        DataMainRoms.class
+                );
+                if (existing != null) {
+                    MainStartVM.startNow(this, existing);
+                    finish();
+                    return;
+                }
+            } catch (Exception ignored) { }
+        }
+
+        String vmId = VMManager.idGenerator();
+        String vmDiskPath = VmFileManager.getPath(vmId, "disk.qcow2");
+
+        if ("disk".equalsIgnoreCase(format)) {
+            createAndStartRomVm(downloaded, null, vmId, arch);
+            return;
+        }
+
+        File vmDisk = new File(vmDiskPath);
+        File parent = vmDisk.getParentFile();
+        if (parent == null || (!parent.exists() && !parent.mkdirs())) {
+            Toast.makeText(this, "Could not create the virtual machine folder.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        binding.btnDownload.setEnabled(false);
+        binding.btnDownload.setText("PREPARING");
+        binding.tvDownloadStatus.setText("Creating a virtual disk…");
+
+        Terminal2 terminal = new Terminal2(this);
+        String safeDiskPath = vmDiskPath.replace("'", "'\\''");
+        terminal.execute("qemu-img create -f qcow2 '" + safeDiskPath + "' 16G",
+                new Terminal2.Terminal2Callback() {
+                    @Override
+                    public void onRunning(String command, String newLine) { }
+
+                    @Override
+                    public void onFinished(String command, String log, int status) {
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            if (status != terminal.SUCCESS || !vmDisk.isFile() || vmDisk.length() <= 0) {
+                                binding.btnDownload.setEnabled(true);
+                                binding.btnDownload.setText("RUN");
+                                binding.tvDownloadStatus.setText("Could not prepare virtual disk. Tap Run to retry.");
+                                Toast.makeText(RomInfo.this, "Virtual disk creation failed: " + log, Toast.LENGTH_LONG).show();
+                                return;
+                            }
+                            createAndStartRomVm(downloaded, vmDisk, vmId, arch);
+                        });
+                    }
+
+                    @Override
+                    public void onError(String command, Exception exception) {
+                        runOnUiThread(() -> {
+                            binding.btnDownload.setEnabled(true);
+                            binding.btnDownload.setText("RUN");
+                            binding.tvDownloadStatus.setText("Could not prepare virtual disk. Tap Run to retry.");
+                            Toast.makeText(RomInfo.this, "Virtual disk error: " + exception.getMessage(), Toast.LENGTH_LONG).show();
+                        });
+                    }
+                });
+    }
+
+    private void createAndStartRomVm(File downloaded, File vmDisk, String vmId, String arch) {
+        DataMainRoms config = new DataMainRoms();
+        config.vmID = vmId;
+        config.itemName = getIntent().getStringExtra("title");
+        config.itemIcon = "";
+        config.itemArch = arch;
+        config.itemPath = vmDisk == null ? downloaded.getAbsolutePath() : vmDisk.getAbsolutePath();
+        config.imgCdrom = vmDisk == null ? "" : downloaded.getAbsolutePath();
+        config.itemExtra = vmDisk == null ? "" : "-boot order=c,d -vga std";
+        config.memory = getIntent().getStringExtra("romCategory") != null
+                && "windows".equalsIgnoreCase(getIntent().getStringExtra("romCategory")) ? 4096 : 2048;
+        config.cores = 1;
+        config.graphicCard = 1;
+        config.networkCard = 3;
+        config.soundCard = 2;
+        config.accel = DeviceUtils.is64bit() ? 2 : 1;
+        config.qmpPort = VMManager.startRandomPort();
+
+        if (!FileUtils.isFileExists(AppConfig.romsdatajson)) {
+            FileUtils.writeToFile(AppConfig.maindirpath, "roms-data.json", "[]");
+        }
+
+        if (!VMManager.addVM(config, -1)) {
+            binding.btnDownload.setEnabled(true);
+            binding.btnDownload.setText("RUN");
+            binding.tvDownloadStatus.setText("Could not register this virtual machine.");
+            Toast.makeText(this, "Could not add the OS to your VM list.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        getSharedPreferences("rom_store_downloads", MODE_PRIVATE).edit()
+                .putString("vm_id_" + downloadKey(), vmId)
+                .apply();
+        binding.tvDownloadStatus.setText("Starting " + config.itemName + "…");
+        MainStartVM.startNow(this, config);
+        finish();
     }
 
     private void installDownloadedApk(File apk) {
@@ -629,7 +772,7 @@ public class RomInfo extends AppCompatActivity {
     private String getArchName(String arch) {
         return switch (arch) {
             case "X86_64" -> getString(R.string.x86_64);
-            case "i386" -> getString(R.string.i386_qemu);
+            case "i386", "I386" -> getString(R.string.i386_qemu);
             case "ARM64" -> getString(R.string.arm64_qemu);
             case "PPC" -> getString(R.string.powerpc_qemu);
             default -> getString(R.string.unknow);

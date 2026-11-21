@@ -77,13 +77,20 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
                 intent.putExtra("size", current.fileSize);
                 intent.putExtra("id", current.id);
                 intent.putExtra("vecid", current.vecid);
+                intent.putExtra("romCategory", current.romCategory);
+                intent.putExtra("romVersion", current.romVersion);
+                intent.putExtra("romFormat", current.romFormat);
+                intent.putExtra("rootSupported", current.rootSupported);
                 intent.putExtra("isRomInfo", true);
                 context.startActivity(intent);
             });
 
             myHolder.textAvail.setText(R.string.available);
         } else {
-            myHolder.textAvail.setText(R.string.unavailable);
+            myHolder.textAvail.setText(
+                    current.romUrl == null || current.romUrl.trim().isEmpty()
+                            ? "Not uploaded yet" : context.getString(R.string.unavailable)
+            );
             myHolder.textAvail.setTextColor(Color.RED);
         }
 

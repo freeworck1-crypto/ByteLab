@@ -1,6 +1,9 @@
 package com.vectras.vm.main.romstore;
 
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -9,73 +12,82 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-
 import com.anbui.elephant.retrofit2utils.Retrofit2Utils;
-import com.google.android.material.transition.MaterialFadeThrough;
-import com.google.common.reflect.TypeToken;
+import com.google.android.material.chip.Chip;
 import com.google.gson.Gson;
+import com.google.common.reflect.TypeToken;
 import com.vectras.vm.AppConfig;
+import com.vectras.vm.R;
 import com.vectras.vm.databinding.FragmentHomeRomStoreBinding;
 import com.vectras.vm.main.core.SharedData;
 
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RomStoreFragment extends Fragment {
 
-    FragmentHomeRomStoreBinding binding;
+    private FragmentHomeRomStoreBinding binding;
     private String contentJSON = "[]";
-    HomeRomStoreViewModel homeRomStoreViewModel;
-    RomStoreHomeAdpater mAdapter;
-    List<DataRoms> data = new ArrayList<>();
-    LinearLayoutManager layoutManager;
+    private HomeRomStoreViewModel homeRomStoreViewModel;
+    private RomStoreHomeAdpater mAdapter;
+    private final List<DataRoms> data = new ArrayList<>();
+    private LinearLayoutManager layoutManager;
+    private String selectedCategory = "all";
+    private String selectedAndroidVersion = "all";
 
     public static RomStoreCallToHomeListener romStoreCallToHomeListener;
+
     public interface RomStoreCallToHomeListener {
         void updateSearchStatus(boolean isReady);
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // setEnterTransition(new MaterialFadeThrough()); (removed for speed)
-        // setReturnTransition(new MaterialFadeThrough()); (removed for speed)
-        // setExitTransition(new MaterialFadeThrough()); (removed for speed)
-        // setReenterTransition(new MaterialFadeThrough()); (removed for speed)
-    }
-
-    @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         binding = FragmentHomeRomStoreBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        mAdapter = new RomStoreHomeAdpater(getContext(), data, false);
-        layoutManager = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
-        binding.rvRomlist.setAdapter(mAdapter);
+        mAdapter = new RomStoreHomeAdpater(requireContext(), data, false);
+        layoutManager = new LinearLayoutManager(requireContext());
         binding.rvRomlist.setLayoutManager(layoutManager);
+        binding.rvRomlist.setAdapter(mAdapter);
 
         binding.rvRomlist.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-
-                int totalItemCount = layoutManager.getItemCount();
-                int lastVisibleItem = layoutManager.findLastVisibleItemPosition();
-
-                if (lastVisibleItem >= totalItemCount - 2) {
-                    mAdapter.loadMore();
-                }
+                int total = layoutManager.getItemCount();
+                int last = layoutManager.findLastVisibleItemPosition();
+                if (total > 0 && last >= total - 2) mAdapter.loadMore();
             }
+        });
+
+        binding.chipGroupRomCategories.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty()) return;
+            int id = checkedIds.get(0);
+            if (id == R.id.chip_rom_android) selectedCategory = "android";
+            else if (id == R.id.chip_rom_linux) selectedCategory = "linux";
+            else if (id == R.id.chip_rom_windows) selectedCategory = "windows";
+            else if (id == R.id.chip_rom_other) selectedCategory = "other";
+            else selectedCategory = "all";
+
+            selectedAndroidVersion = "all";
+            updateAndroidVersionChips();
+            applyFilters();
         });
 
         homeRomStoreViewModel = new ViewModelProvider(requireActivity()).get(HomeRomStoreViewModel.class);
@@ -83,29 +95,111 @@ public class RomStoreFragment extends Fragment {
             if (roms == null || roms.isEmpty()) {
                 loadFromServer();
             } else {
+                data.clear();
+                data.addAll(roms);
                 binding.linearload.setVisibility(View.GONE);
-                mAdapter.submitList(roms);
+                binding.linearnothinghere.setVisibility(View.GONE);
+                updateAndroidVersionChips();
+                applyFilters();
             }
         });
 
         binding.buttontryagain.setOnClickListener(v -> loadFromServer());
     }
 
-    private void loadFromServer() {
-        if (romStoreCallToHomeListener != null) {
-            romStoreCallToHomeListener.updateSearchStatus(false);
+    private void updateAndroidVersionChips() {
+        boolean show = "android".equals(selectedCategory);
+        binding.androidVersionsScroll.setVisibility(show ? View.VISIBLE : View.GONE);
+        binding.chipGroupAndroidVersions.removeAllViews();
+        if (!show) return;
+
+        TreeSet<String> versions = new TreeSet<>((a, b) -> compareVersions(b, a));
+        for (DataRoms rom : data) {
+            if ("android".equals(categoryOf(rom))) {
+                String version = versionOf(rom);
+                if (!version.isEmpty()) versions.add(version);
+            }
         }
+
+        addVersionChip("All versions", "all", true);
+        for (String version : versions) addVersionChip("Android " + version, version, false);
+    }
+
+    private void addVersionChip(String label, String value, boolean checked) {
+        Chip chip = new Chip(requireContext());
+        chip.setText(label);
+        chip.setCheckable(true);
+        chip.setChecked(checked);
+        chip.setClickable(true);
+        chip.setEnsureMinTouchTargetSize(false);
+        binding.chipGroupAndroidVersions.addView(chip);
+        chip.setOnCheckedChangeListener((button, isChecked) -> {
+            if (!isChecked) return;
+            selectedAndroidVersion = value;
+            applyFilters();
+        });
+    }
+
+    private int compareVersions(String first, String second) {
+        try {
+            String[] a = first.split("\\.");
+            String[] b = second.split("\\.");
+            int max = Math.max(a.length, b.length);
+            for (int i = 0; i < max; i++) {
+                int av = i < a.length ? Integer.parseInt(a[i]) : 0;
+                int bv = i < b.length ? Integer.parseInt(b[i]) : 0;
+                if (av != bv) return Integer.compare(av, bv);
+            }
+        } catch (Exception ignored) { }
+        return first.compareToIgnoreCase(second);
+    }
+
+    private String categoryOf(DataRoms rom) {
+        if (rom.romCategory != null && !rom.romCategory.trim().isEmpty())
+            return rom.romCategory.trim().toLowerCase(Locale.ROOT);
+        String value = ((rom.romName == null ? "" : rom.romName) + " "
+                + (rom.romKernel == null ? "" : rom.romKernel)).toLowerCase(Locale.ROOT);
+        if (value.contains("android")) return "android";
+        if (value.contains("windows")) return "windows";
+        if (value.contains("linux") || value.contains("ubuntu") || value.contains("debian")
+                || value.contains("alpine")) return "linux";
+        return "other";
+    }
+
+    private String versionOf(DataRoms rom) {
+        if (rom.romVersion != null && !rom.romVersion.trim().isEmpty()) return rom.romVersion.trim();
+        String value = (rom.romName == null ? "" : rom.romName) + " "
+                + (rom.romKernel == null ? "" : rom.romKernel);
+        Matcher matcher = Pattern.compile("(?:Android(?:-x86)?\\s*)([0-9]+(?:\\.[0-9]+)*)",
+                Pattern.CASE_INSENSITIVE).matcher(value);
+        return matcher.find() ? matcher.group(1) : "";
+    }
+
+    private void applyFilters() {
+        List<DataRoms> filtered = new ArrayList<>();
+        for (DataRoms rom : data) {
+            String category = categoryOf(rom);
+            if (!"all".equals(selectedCategory)
+                    && !("other".equals(selectedCategory) ? !category.equals("android")
+                    && !category.equals("linux") && !category.equals("windows")
+                    : selectedCategory.equals(category))) continue;
+
+            if ("android".equals(selectedCategory) && !"all".equals(selectedAndroidVersion)
+                    && !selectedAndroidVersion.equals(versionOf(rom))) continue;
+            filtered.add(rom);
+        }
+        mAdapter.submitList(filtered);
+    }
+
+    private void loadFromServer() {
+        if (romStoreCallToHomeListener != null) romStoreCallToHomeListener.updateSearchStatus(false);
         binding.linearload.setVisibility(View.VISIBLE);
         binding.linearnothinghere.setVisibility(View.GONE);
 
-        // Load the catalog bundled inside the APK first. This makes the added systems
-        // visible even when the optional GitHub catalog URL is unavailable.
         final String bundled = readBundledCatalog();
         final String[] results = new String[]{bundled, "", ""};
         final boolean[] done = new boolean[]{true, false, false};
 
-        // Load ByteLab's own catalog as well as the upstream catalog. The bundled
-        // catalog remains available when either network source is offline.
         Retrofit2Utils.get(AppConfig.myRomStoreJson, ((ok, body, status, error) -> {
             results[1] = (ok && body != null) ? body : "";
             done[1] = true;
@@ -119,69 +213,54 @@ public class RomStoreFragment extends Fragment {
     }
 
     private void finishCatalogSources(String[] results, boolean[] done) {
-        if (!done[0] || !done[1] || !done[2]) return;
+        if (!done[0] || !done[1] || !done[2] || !isAdded()) return;
         String online = mergeJson(results[1], results[2]);
         finishLoad(new String[]{results[0], online}, new boolean[]{true, true});
     }
 
     private String readBundledCatalog() {
-        java.io.InputStream input = null;
-        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
-        try {
-            input = requireContext().getAssets().open("roms.json");
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (InputStream input = requireContext().getAssets().open("roms.json")) {
             byte[] buffer = new byte[4096];
             int count;
-            while ((count = input.read(buffer)) != -1) {
-                output.write(buffer, 0, count);
-            }
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
             return output.toString("UTF-8");
         } catch (Exception ignored) {
             return "[]";
         } finally {
-            try { if (input != null) input.close(); } catch (Exception ignored) { }
             try { output.close(); } catch (Exception ignored) { }
         }
     }
 
     private void finishLoad(String[] results, boolean[] done) {
-        if (!done[0] || !done[1]) return;
-
-        String bundled = results[0] == null ? "" : results[0];
-        String original = results[1] == null ? "" : results[1];
-        String merged = mergeJson(bundled, original);
-
+        if (!done[0] || !done[1] || !isAdded()) return;
+        String merged = mergeJson(results[0], results[1]);
         if (merged == null || merged.trim().isEmpty() || "[]".equals(merged.trim())) {
             binding.linearload.setVisibility(View.GONE);
             binding.linearnothinghere.setVisibility(View.VISIBLE);
-            if (romStoreCallToHomeListener != null) {
-                romStoreCallToHomeListener.updateSearchStatus(true);
-            }
+            if (romStoreCallToHomeListener != null) romStoreCallToHomeListener.updateSearchStatus(true);
             return;
         }
-
         contentJSON = merged;
         binding.linearload.setVisibility(View.GONE);
         binding.linearnothinghere.setVisibility(View.GONE);
         loadData();
     }
 
-    /** Bundled entries appear first; original online entries are appended without duplicates. */
     private String mergeJson(String bundled, String original) {
         try {
             com.google.gson.JsonArray out = new com.google.gson.JsonArray();
-            java.util.HashSet<String> seen = new java.util.HashSet<>();
-
+            Set<String> seen = new HashSet<>();
             addCatalogEntries(out, seen, bundled);
             addCatalogEntries(out, seen, original);
             return out.toString();
         } catch (Exception e) {
-            return (bundled != null && !bundled.trim().isEmpty() && !"[]".equals(bundled.trim()))
+            return bundled != null && !bundled.trim().isEmpty() && !"[]".equals(bundled.trim())
                     ? bundled : (original == null ? "[]" : original);
         }
     }
 
-    private void addCatalogEntries(com.google.gson.JsonArray output,
-                                   java.util.Set<String> seen, String json) {
+    private void addCatalogEntries(com.google.gson.JsonArray output, Set<String> seen, String json) {
         if (json == null || json.trim().isEmpty()) return;
         try {
             com.google.gson.JsonArray entries = com.google.gson.JsonParser.parseString(json).getAsJsonArray();
@@ -190,34 +269,33 @@ public class RomStoreFragment extends Fragment {
                 com.google.gson.JsonObject object = element.getAsJsonObject();
                 String id = object.has("id") && !object.get("id").isJsonNull()
                         ? object.get("id").getAsString() : "";
-                String key = id.isEmpty() ? object.toString() : id;
-                if (seen.add(key)) output.add(object);
+                if (seen.add(id.isEmpty() ? object.toString() : id)) output.add(object);
             }
-        } catch (Exception ignored) {
-            // Ignore an unavailable or malformed optional catalog; keep valid entries.
-        }
+        } catch (Exception ignored) { }
     }
 
     private void loadData() {
-        List<DataRoms> dataRoms = new ArrayList<>();
-
         try {
-            Gson gson = new Gson();
             Type listType = new TypeToken<List<DataRoms>>() {}.getType();
-            dataRoms = gson.fromJson(contentJSON, listType);
+            List<DataRoms> parsed = new Gson().fromJson(contentJSON, listType);
+            data.clear();
+            if (parsed != null) data.addAll(parsed);
         } catch (Exception e) {
             binding.linearload.setVisibility(View.GONE);
             binding.linearnothinghere.setVisibility(View.VISIBLE);
         }
 
-        homeRomStoreViewModel.setRomsList(dataRoms);
-        data.clear();
-        data.addAll(dataRoms);
-
-        mAdapter.submitList(data);
-
+        homeRomStoreViewModel.setRomsList(new ArrayList<>(data));
         SharedData.dataRomStore.clear();
-        SharedData.dataRomStore.addAll(dataRoms);
-        romStoreCallToHomeListener.updateSearchStatus(true);
+        SharedData.dataRomStore.addAll(data);
+        updateAndroidVersionChips();
+        applyFilters();
+        if (romStoreCallToHomeListener != null) romStoreCallToHomeListener.updateSearchStatus(true);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 }

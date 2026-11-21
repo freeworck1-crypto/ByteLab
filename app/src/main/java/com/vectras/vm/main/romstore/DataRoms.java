@@ -40,4 +40,16 @@ public class DataRoms {
     @SerializedName("vecid")
     public String vecid;
     public boolean gui;
+
+    @SerializedName("rom_category")
+    public String romCategory = "";
+
+    @SerializedName("rom_version")
+    public String romVersion = "";
+
+    @SerializedName("root_supported")
+    public boolean rootSupported = false;
+
+    @SerializedName("rom_format")
+    public String romFormat = "iso";
 }

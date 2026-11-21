@@ -6,13 +6,95 @@
     android:transitionGroup="true"
     tools:context=".main.romstore.RomStoreFragment">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_romlist"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingBottom="8dp"
-        android:clipToPadding="false"
-        android:fillViewport="true" />
+        android:orientation="vertical">
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:fillViewport="false">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_rom_categories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                xmlns:app="http://schemas.android.com/apk/res-auto">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_rom_all"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="All" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_rom_android"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Android" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_rom_linux"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Linux" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_rom_windows"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Windows" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_rom_other"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Other" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <HorizontalScrollView
+            android:id="@+id/android_versions_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_android_versions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="6dp"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+        </HorizontalScrollView>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_romlist"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingBottom="8dp"
+            android:clipToPadding="false"
+            android:fillViewport="true" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/linearload"
@@ -27,7 +109,6 @@
         <com.google.android.material.loadingindicator.LoadingIndicator
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
-
     </LinearLayout>
 
     <LinearLayout
