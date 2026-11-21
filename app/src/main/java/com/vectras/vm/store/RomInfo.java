@@ -716,7 +716,7 @@ public class RomInfo extends AppCompatActivity {
         config.itemArch = arch;
         config.itemPath = vmDisk == null ? downloaded.getAbsolutePath() : vmDisk.getAbsolutePath();
         config.imgCdrom = vmDisk == null ? "" : downloaded.getAbsolutePath();
-        config.itemExtra = vmDisk == null ? "" : "-boot order=c,d -vga std";
+        config.itemExtra = vmDisk == null ? "" : "-boot order=dc -vga std";
         config.memory = getIntent().getStringExtra("romCategory") != null
                 && "windows".equalsIgnoreCase(getIntent().getStringExtra("romCategory")) ? 4096 : 2048;
         config.cores = 1;

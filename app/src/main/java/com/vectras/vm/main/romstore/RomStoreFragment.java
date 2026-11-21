@@ -66,6 +66,9 @@ public class RomStoreFragment extends Fragment {
         layoutManager = new LinearLayoutManager(requireContext());
         binding.rvRomlist.setLayoutManager(layoutManager);
         binding.rvRomlist.setAdapter(mAdapter);
+        binding.rvRomlist.setHasFixedSize(true);
+        binding.rvRomlist.setItemViewCacheSize(16);
+        binding.rvRomlist.setItemAnimator(null);
 
         binding.rvRomlist.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -200,6 +203,10 @@ public class RomStoreFragment extends Fragment {
         final String[] results = new String[]{bundled, "", ""};
         final boolean[] done = new boolean[]{true, false, false};
 
+        // Display the APK-bundled catalogue immediately. Optional online catalogues
+        // are merged later, so a slow network cannot block first interaction.
+        finishLoad(new String[]{bundled, "[]"}, new boolean[]{true, true});
+
         Retrofit2Utils.get(AppConfig.myRomStoreJson, ((ok, body, status, error) -> {
             results[1] = (ok && body != null) ? body : "";
             done[1] = true;
@@ -213,7 +220,7 @@ public class RomStoreFragment extends Fragment {
     }
 
     private void finishCatalogSources(String[] results, boolean[] done) {
-        if (!done[0] || !done[1] || !done[2] || !isAdded()) return;
+        if (!done[0] || !done[1] || !done[2] || !isAdded() || binding == null) return;
         String online = mergeJson(results[1], results[2]);
         finishLoad(new String[]{results[0], online}, new boolean[]{true, true});
     }
@@ -233,7 +240,7 @@ public class RomStoreFragment extends Fragment {
     }
 
     private void finishLoad(String[] results, boolean[] done) {
-        if (!done[0] || !done[1] || !isAdded()) return;
+        if (!done[0] || !done[1] || !isAdded() || binding == null) return;
         String merged = mergeJson(results[0], results[1]);
         if (merged == null || merged.trim().isEmpty() || "[]".equals(merged.trim())) {
             binding.linearload.setVisibility(View.GONE);
