@@ -59,6 +59,13 @@
                     android:text="Windows" />
 
                 <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_rom_containers"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Containers (lightweight)" />
+
+                <com.google.android.material.chip.Chip
                     android:id="@+id/chip_rom_other"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"

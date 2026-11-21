@@ -56,11 +56,19 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
         final DataRoms current = displayList.get(position);
         Glide.with(context).load(current.romIcon).override(180, 180).placeholder(R.drawable.ic_computer_180dp_with_padding).error(R.drawable.ic_computer_180dp_with_padding).into(myHolder.ivIcon);
         myHolder.textName.setText(current.romName);
-        myHolder.textSize.setText(current.romArch + " - " + current.fileSize);
+        myHolder.textSize.setText("container".equals(current.romType)
+                ? "Container • instant start • " + current.fileSize
+                : current.romArch + " - " + current.fileSize);
         boolean hasSource = current.romUrl != null && !current.romUrl.trim().isEmpty();
         myHolder.textAvail.setTextColor(myHolder.availColor);
         if (Boolean.TRUE.equals(current.romAvail) || hasSource) {
             myHolder.linearItem.setOnClickListener(v -> {
+                if ("container".equals(current.romType)) {
+                    Intent ci = new Intent(context, com.vectras.vm.container.ContainerInfoActivity.class);
+                    ci.putExtra(com.vectras.vm.container.ContainerInfoActivity.EXTRA_ID, current.id);
+                    context.startActivity(ci);
+                    return;
+                }
                 Intent intent = new Intent();
                 intent.setClass(context, RomInfo.class);
                 intent.putExtra("title", current.romName);

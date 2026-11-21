@@ -1,0 +1,47 @@
+[
+  {
+    "id": "bytelab-container-alpine",
+    "name": "Alpine Linux (container)",
+    "category": "linux",
+    "icon": "file:///android_asset/rom-icons/linux.png",
+    "size": "~4 MB",
+    "desc": "Tiny and very fast. Starts in about a second with a few MB download. Root inside the container is ON by default, so apk add works right away.",
+    "listing_url": "https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/{arch}/latest-releases.yaml",
+    "file_regex": "alpine-minirootfs-[0-9.]+-{arch}\\.tar\\.gz",
+    "url_template": "https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/{arch}/{file}",
+    "arch_arm64": "aarch64",
+    "arch_x86_64": "x86_64",
+    "shell": "/bin/sh",
+    "root_supported": true
+  },
+  {
+    "id": "bytelab-container-ubuntu-24-04",
+    "name": "Ubuntu 24.04 (container)",
+    "category": "linux",
+    "icon": "file:///android_asset/rom-icons/linux.png",
+    "size": "~30 MB",
+    "desc": "Minimal Ubuntu userland. Run apt update && apt install anything. Root inside the container is ON by default.",
+    "listing_url": "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/",
+    "file_regex": "ubuntu-base-24\\.04(\\.[0-9]+)?-base-{arch}\\.tar\\.gz",
+    "url_template": "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/{file}",
+    "arch_arm64": "arm64",
+    "arch_x86_64": "amd64",
+    "shell": "/bin/bash",
+    "root_supported": true
+  },
+  {
+    "id": "bytelab-container-ubuntu-22-04",
+    "name": "Ubuntu 22.04 (container)",
+    "category": "linux",
+    "icon": "file:///android_asset/rom-icons/linux.png",
+    "size": "~28 MB",
+    "desc": "Older LTS Ubuntu userland, useful when a program needs older libraries. Root inside the container is ON by default.",
+    "listing_url": "https://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/",
+    "file_regex": "ubuntu-base-22\\.04(\\.[0-9]+)?-base-{arch}\\.tar\\.gz",
+    "url_template": "https://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/{file}",
+    "arch_arm64": "arm64",
+    "arch_x86_64": "amd64",
+    "shell": "/bin/bash",
+    "root_supported": true
+  }
+]

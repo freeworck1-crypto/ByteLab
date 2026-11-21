@@ -52,6 +52,10 @@ public class DataRoms {
     @SerializedName("root_supported")
     public boolean rootSupported = false;
 
+    /** "image" (full OS image, default) or "container" (lightweight proot container). */
+    @SerializedName("rom_type")
+    public String romType = "image";
+
     @SerializedName("rom_format")
     public String romFormat = "iso";
 }

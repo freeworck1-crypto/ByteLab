@@ -154,11 +154,26 @@ public class MainVNCActivity extends VncCanvasActivity {
                 }
             };
 
+    private com.vectras.vm.utils.GestureGuard gestureGuard;
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
+        if (gestureGuard != null) gestureGuard.onTouch(ev);
+        return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && gestureGuard != null) gestureGuard.lock();
+    }
+
     @Override
     public void onCreate(Bundle b) {
         super.onCreate(b);
 
         getContext = this;
+        gestureGuard = new com.vectras.vm.utils.GestureGuard(this);
 
         if (MainSettingsManager.getEdgeToEdgeVnc(this)) {
             UIUtils.edgeToEdge(this);
@@ -397,6 +412,7 @@ public class MainVNCActivity extends VncCanvasActivity {
 
     public void onDestroy() {
         super.onDestroy();
+        if (gestureGuard != null) gestureGuard.dispose();
         this.stopTimeListener();
         if (streamAudio != null) streamAudio.release();
         //Terminal.killQemuProcess();
@@ -405,6 +421,7 @@ public class MainVNCActivity extends VncCanvasActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (gestureGuard != null) gestureGuard.lock();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && MainSettingsManager.getAutoSwitchToExternalMouse(this)) {
             inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
             inputManager.registerInputDeviceListener(inputDeviceListener, null);

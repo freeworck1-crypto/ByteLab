@@ -107,7 +107,7 @@ public class MainStartVM {
                 }
             }
 
-            String env = StartVM.env(activity, vmConfig);
+            String env = com.vectras.vm.autopilot.AutoPilot.augmentEnv(activity, vmConfig, StartVM.env(activity, vmConfig));
             activity.runOnUiThread(() -> startNow(activity, vmConfig.itemName, env, vmConfig.vmID, vmConfig.itemIcon, dialog));
         }).start();
     }
@@ -416,6 +416,7 @@ public class MainStartVM {
                             }
 
                             QmpSender.resume();
+                            com.vectras.vm.autopilot.AutoPilot.onVmStarted(context, vmID);
 
                             if (MainSettingsManager.getVmUi(context).equals("VNC")) {
                                 if (MainSettingsManager.getVncExternal(context)) {

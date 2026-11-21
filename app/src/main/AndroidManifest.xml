@@ -214,6 +214,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:label="Set Qemu Version" />
 
+        <activity
+            android:name=".container.ContainerInfoActivity"
+            android:exported="false"
+            android:label="Container" />
+
         <service
             android:name=".MainService"
             android:exported="false" />

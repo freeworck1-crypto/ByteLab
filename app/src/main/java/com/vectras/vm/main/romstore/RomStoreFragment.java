@@ -85,6 +85,7 @@ public class RomStoreFragment extends Fragment {
             if (id == R.id.chip_rom_android) selectedCategory = "android";
             else if (id == R.id.chip_rom_linux) selectedCategory = "linux";
             else if (id == R.id.chip_rom_windows) selectedCategory = "windows";
+            else if (id == R.id.chip_rom_containers) selectedCategory = "containers";
             else if (id == R.id.chip_rom_other) selectedCategory = "other";
             else selectedCategory = "all";
 
@@ -184,6 +185,12 @@ public class RomStoreFragment extends Fragment {
             // Entries that have no download source are not shown (no dead "Not uploaded yet" rows).
             if (rom.romUrl == null || rom.romUrl.trim().isEmpty()) continue;
             String category = categoryOf(rom);
+            boolean isContainer = "container".equals(rom.romType);
+            if ("containers".equals(selectedCategory)) {
+                if (isContainer) filtered.add(rom);
+                continue;
+            }
+            if (isContainer && !"all".equals(selectedCategory)) continue;
             if (!"all".equals(selectedCategory)
                     && !("other".equals(selectedCategory) ? !category.equals("android")
                     && !category.equals("linux") && !category.equals("windows")
@@ -283,12 +290,39 @@ public class RomStoreFragment extends Fragment {
         } catch (Exception ignored) { }
     }
 
+    /** Lightweight containers are listed next to the full OS images (the images are untouched). */
+    private List<DataRoms> containerRows() {
+        List<DataRoms> rows = new ArrayList<>();
+        for (com.vectras.vm.container.ContainerEntry c : com.vectras.vm.container.ContainerManager.loadCatalog(requireContext())) {
+            DataRoms r = new DataRoms();
+            r.id = c.id;
+            r.vecid = c.id;
+            r.romName = c.name;
+            r.romIcon = c.icon;
+            r.romArch = "ARM64/x86_64";
+            r.romKernel = c.name;
+            r.romAvail = c.available;
+            r.romSize = c.size;
+            r.fileSize = c.size;
+            r.romUrl = "container:" + c.id; // non-empty so the row is shown
+            r.desc = c.desc;
+            r.creator = "ByteLab";
+            r.verified = true;
+            r.romCategory = c.category;
+            r.romType = "container";
+            r.rootSupported = c.rootSupported;
+            rows.add(r);
+        }
+        return rows;
+    }
+
     private void loadData() {
         try {
             Type listType = new TypeToken<List<DataRoms>>() {}.getType();
             List<DataRoms> parsed = new Gson().fromJson(contentJSON, listType);
             data.clear();
             if (parsed != null) data.addAll(parsed);
+            data.addAll(containerRows());
         } catch (Exception e) {
             binding.linearload.setVisibility(View.GONE);
             binding.linearnothinghere.setVisibility(View.VISIBLE);
