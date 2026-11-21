@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
@@ -37,22 +37,37 @@ jobs:
           done
           test -d "$ANDROID_HOME/ndk/28.2.13676358"
 
-      - name: Create debug keystore
+      # The release key is supplied through GitHub Actions Secrets.
+      # Never generate a new signing key during a build.
+      - name: Restore persistent ByteLab signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.BYTELAB_KEYSTORE_BASE64 }}
         run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Missing BYTELAB_KEYSTORE_BASE64. Configure the four ByteLab signing secrets before building."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/bytelab-signing"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/bytelab-signing/bytelab-release.jks"
+          test -s "$RUNNER_TEMP/bytelab-signing/bytelab-release.jks"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build APK
+      - name: Build signed release APKs
+        env:
+          BYTELAB_KEYSTORE_FILE: ${{ runner.temp }}/bytelab-signing/bytelab-release.jks
+          BYTELAB_STORE_PASSWORD: ${{ secrets.BYTELAB_STORE_PASSWORD }}
+          BYTELAB_KEY_ALIAS: ${{ secrets.BYTELAB_KEY_ALIAS }}
+          BYTELAB_KEY_PASSWORD: ${{ secrets.BYTELAB_KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon assembleDebug
+          VERSION_CODE=$((157 + GITHUB_RUN_NUMBER))
+          ./gradlew --no-daemon assembleRelease -PVERSION_CODE="$VERSION_CODE"
 
-      - name: Upload APK
+      - name: Upload signed APKs
         uses: actions/upload-artifact@v4
         with:
-          name: ByteLab-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: ByteLab-release-apks
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error

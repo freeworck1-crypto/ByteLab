@@ -11,7 +11,9 @@ android {
         applicationId "com.niaznix.bytelab"
         minSdk minApi
         targetSdk targetApi
-        versionCode 157
+        // CI supplies a monotonically increasing VERSION_CODE for every build.
+        // Keep 157 as the local-build fallback.
+        versionCode (project.findProperty("VERSION_CODE") ?: "157").toInteger()
         versionName "4.5.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
@@ -20,8 +22,24 @@ android {
         resValue "integer", "app_version_code", versionCode.toString()
     }
 
+    signingConfigs {
+        release {
+            def releaseKeystore = System.getenv("BYTELAB_KEYSTORE_FILE")
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv("BYTELAB_STORE_PASSWORD")
+                keyAlias System.getenv("BYTELAB_KEY_ALIAS")
+                keyPassword System.getenv("BYTELAB_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // CI release APKs use the same private keystore on every build.
+            if (System.getenv("BYTELAB_KEYSTORE_FILE")) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
