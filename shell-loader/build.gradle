@@ -1,26 +1,24 @@
 apply plugin: 'com.android.application'
 
-def appSigningConfig = project(':app').android.signingConfigs.debug
+// Reuse the app's debug signing configuration WITHOUT modifying it.
+def signingConfig = project(':app').android.signingConfigs.debug
 
-android {
-    buildToolsVersion '36.1.0'
-    compileSdk 34
-
-    buildTypes {
-        debug {
-            signingConfig appSigningConfig
-        }
-    }
+def keystoreFile = signingConfig.storeFile
+if (keystoreFile == null) {
+    keystoreFile = new File(
+        System.getProperty("user.home"),
+        ".android/debug.keystore"
+    )
 }
 
-def debugKeystore = new File(
-    System.getProperty("user.home"),
-    ".android/debug.keystore"
-)
+def storePassword = signingConfig.storePassword ?: "android"
+def keyAlias = signingConfig.keyAlias ?: "AndroidDebugKey"
+def keyPassword = signingConfig.keyPassword ?: storePassword
 
-debugKeystore.parentFile.mkdirs()
+keystoreFile.parentFile.mkdirs()
 
-if (!debugKeystore.exists()) {
+// Generate the standard debug keystore only when it is missing.
+if (!keystoreFile.exists()) {
     def keytool = new File(
         System.getProperty("java.home"),
         "bin/keytool"
@@ -30,11 +28,11 @@ if (!debugKeystore.exists()) {
         keytool.absolutePath,
         "-genkeypair",
         "-v",
-        "-keystore", debugKeystore.absolutePath,
+        "-keystore", keystoreFile.absolutePath,
         "-storetype", "JKS",
-        "-storepass", "android",
-        "-alias", "AndroidDebugKey",
-        "-keypass", "android",
+        "-storepass", storePassword,
+        "-alias", keyAlias,
+        "-keypass", keyPassword,
         "-keyalg", "RSA",
         "-keysize", "2048",
         "-validity", "10000",
@@ -45,20 +43,27 @@ if (!debugKeystore.exists()) {
     def exitCode = process.waitFor()
 
     if (exitCode != 0) {
-        throw new GradleException("Could not create debug keystore: " + output)
+        throw new GradleException("Debug keystore generation failed: " + output)
     }
 }
 
-appSigningConfig.storeFile = debugKeystore
-appSigningConfig.storePassword = "android"
-appSigningConfig.keyAlias = "AndroidDebugKey"
-appSigningConfig.keyPassword = "android"
-
+// Read the certificate using the same app debug signing key.
 def keyStore = java.security.KeyStore.getInstance("JKS")
 keyStore.load(
-    new FileInputStream(debugKeystore),
-    "android".toCharArray()
+    new FileInputStream(keystoreFile),
+    storePassword.toCharArray()
 )
+
+android {
+    buildTypes {
+        debug {
+            signingConfig signingConfig
+        }
+    }
+
+    buildToolsVersion '36.1.0'
+    compileSdk 34
+}
 
 android.namespace 'com.vectras.vm'
 android.defaultConfig.minSdkVersion 21
@@ -79,7 +84,7 @@ androidComponents {
 android.defaultConfig.buildConfigField "String", "logTag", "\"Termux:X11 loader\""
 
 android.defaultConfig.buildConfigField "int", "SIGNATURE",
-    String.valueOf(Arrays.hashCode(keyStore.getCertificate("AndroidDebugKey").getEncoded()))
+    String.valueOf(Arrays.hashCode(keyStore.getCertificate(keyAlias).getEncoded()))
 
 android.defaultConfig.buildConfigField "String", "CLASS_ID", "\"com.vectras.vm.x11.CmdEntryPoint\""
 
