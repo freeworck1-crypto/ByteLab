@@ -1,9 +1,9 @@
 apply plugin: 'com.android.application'
 
-// Reuse the app's debug signing configuration WITHOUT modifying it.
-def signingConfig = project(':app').android.signingConfigs.debug
+def appDebugSigningConfig = project(':app').android.signingConfigs.debug
 
-def keystoreFile = signingConfig.storeFile
+def keystoreFile = appDebugSigningConfig.storeFile
+
 if (keystoreFile == null) {
     keystoreFile = new File(
         System.getProperty("user.home"),
@@ -11,13 +11,12 @@ if (keystoreFile == null) {
     )
 }
 
-def storePassword = signingConfig.storePassword ?: "android"
-def keyAlias = signingConfig.keyAlias ?: "AndroidDebugKey"
-def keyPassword = signingConfig.keyPassword ?: storePassword
+def storePassword = appDebugSigningConfig.storePassword ?: "android"
+def keyAlias = appDebugSigningConfig.keyAlias ?: "AndroidDebugKey"
+def keyPassword = appDebugSigningConfig.keyPassword ?: storePassword
 
 keystoreFile.parentFile.mkdirs()
 
-// Generate the standard debug keystore only when it is missing.
 if (!keystoreFile.exists()) {
     def keytool = new File(
         System.getProperty("java.home"),
@@ -29,7 +28,7 @@ if (!keystoreFile.exists()) {
         "-genkeypair",
         "-v",
         "-keystore", keystoreFile.absolutePath,
-        "-storetype", "JKS",
+        "-storetype", "PKCS12",
         "-storepass", storePassword,
         "-alias", keyAlias,
         "-keypass", keyPassword,
@@ -47,22 +46,21 @@ if (!keystoreFile.exists()) {
     }
 }
 
-// Read the certificate using the same app debug signing key.
-def keyStore = java.security.KeyStore.getInstance("JKS")
+def keyStore = java.security.KeyStore.getInstance("PKCS12")
 keyStore.load(
     new FileInputStream(keystoreFile),
     storePassword.toCharArray()
 )
 
 android {
+    compileSdk 34
+    buildToolsVersion '36.1.0'
+
     buildTypes {
         debug {
-            signingConfig signingConfig
+            signingConfig appDebugSigningConfig
         }
     }
-
-    buildToolsVersion '36.1.0'
-    compileSdk 34
 }
 
 android.namespace 'com.vectras.vm'
