@@ -109,6 +109,10 @@ public class DataMainRoms {
     )
     public String itemExtra = "";
 
+    // Guest-only root helper (forwards guest ADB to 127.0.0.1:5555 on the phone)
+
+    public boolean guestRoot;
+
     // Deprecated
 
     @Deprecated

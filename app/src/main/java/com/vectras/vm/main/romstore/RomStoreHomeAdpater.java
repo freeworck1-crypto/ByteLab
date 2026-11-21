@@ -57,13 +57,16 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
         Glide.with(context).load(current.romIcon).override(180, 180).placeholder(R.drawable.ic_computer_180dp_with_padding).error(R.drawable.ic_computer_180dp_with_padding).into(myHolder.ivIcon);
         myHolder.textName.setText(current.romName);
         myHolder.textSize.setText(current.romArch + " - " + current.fileSize);
-        if (Boolean.TRUE.equals(current.romAvail)) {
+        boolean hasSource = current.romUrl != null && !current.romUrl.trim().isEmpty();
+        myHolder.textAvail.setTextColor(myHolder.availColor);
+        if (Boolean.TRUE.equals(current.romAvail) || hasSource) {
             myHolder.linearItem.setOnClickListener(v -> {
                 Intent intent = new Intent();
                 intent.setClass(context, RomInfo.class);
                 intent.putExtra("title", current.romName);
                 intent.putExtra("shortdesc", current.romSize);
                 intent.putExtra("getrom", current.romUrl);
+                intent.putExtra("mirrors", current.romMirrors);
                 intent.putExtra("desc", current.desc);
                 intent.putExtra("icon", current.romIcon);
                 intent.putExtra("filename", current.romPath);
@@ -106,6 +109,7 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
     static class MyHolder extends RecyclerView.ViewHolder {
 
         TextView textName, textAvail, textSize;
+        int availColor;
         ImageView ivIcon;
         LinearLayout linearItem;
 
@@ -116,6 +120,7 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
             ivIcon = itemView.findViewById(R.id.ivIcon);
             textSize = itemView.findViewById(R.id.textSize);
             textAvail = itemView.findViewById(R.id.textAvail);
+            availColor = textAvail.getCurrentTextColor();
 
             linearItem = itemView.findViewById(R.id.linearItem);
         }
@@ -138,7 +143,7 @@ public class RomStoreHomeAdpater extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     public void submitList(List<DataRoms> newData) {
-        fullList.clear();
+        // Do not clear the old list: it is the fragment's shared master list.
         fullList = new ArrayList<>(newData);
 
         displayList.clear();

@@ -102,6 +102,8 @@ public class RomOptionsDialog {
                 bottomSheetDialog.cancel();
             });
 
+            addGuestRootRow(activity, v, bottomSheetDialog, position, vmConfig);
+
             v.findViewById(R.id.ln_cleanup).setOnClickListener(v5 -> {
                 ProgressDialog progressDialog = new ProgressDialog(activity);
                 progressDialog.setText(activity.getString(R.string.just_a_sec));
@@ -168,5 +170,65 @@ public class RomOptionsDialog {
 
             bottomSheetDialog.show();
         }
+    }
+
+    /**
+     * "Root (guest only)": turns on an ADB port-forward from the guest OS to 127.0.0.1:5555 on this
+     * phone. QEMU's user-mode network is NAT-isolated, so this reaches ONLY the virtual machine.
+     * The real phone is never rooted and no host files are exposed.
+     */
+    private static void addGuestRootRow(Activity activity, View root, BottomSheetDialog sheet, int position, DataMainRoms vmConfig) {
+        View anchor = root.findViewById(R.id.ln_cleanup);
+        if (anchor == null || !(anchor.getParent() instanceof android.view.ViewGroup)) return;
+        android.view.ViewGroup parent = (android.view.ViewGroup) anchor.getParent();
+
+        TextView row = new TextView(activity);
+        float d = activity.getResources().getDisplayMetrics().density;
+        int pad = (int) (16 * d);
+        row.setPadding(pad, pad, pad, pad);
+        row.setTextSize(16);
+        android.util.TypedValue tv = new android.util.TypedValue();
+        if (activity.getTheme().resolveAttribute(android.R.attr.textColorPrimary, tv, true)) {
+            row.setTextColor(androidx.core.content.ContextCompat.getColor(activity, tv.resourceId));
+        }
+        row.setText(vmConfig.guestRoot ? "Root (guest only): ON — tap to turn off" : "Root (guest only)");
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setBackgroundResource(R.drawable.object_shape_middle_high);
+
+        row.setOnClickListener(x -> {
+            sheet.cancel();
+            if (vmConfig.guestRoot) {
+                vmConfig.guestRoot = false;
+                VMManager.addVM(vmConfig, position);
+                Toast.makeText(activity, "Guest root helper turned off.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            DialogUtils.twoDialog(
+                    activity,
+                    "Root (guest only)",
+                    "This gives root access INSIDE this virtual machine only. Your real phone is not rooted and none of its data is exposed.\n\n"
+                            + "How it works: the VM's ADB port is forwarded to 127.0.0.1:5555 on this phone.\n\n"
+                            + "After starting the VM:\n"
+                            + "1. In the guest, open Settings → Developer options and turn on USB/ADB debugging and \"Root access\" (Android-x86 images include an su binary).\n"
+                            + "2. In a terminal on the phone run:  adb connect 127.0.0.1:5555  then  adb root  and  adb shell\n\n"
+                            + "Turn this on?",
+                    "Turn on",
+                    activity.getString(R.string.cancel),
+                    true,
+                    R.drawable.warning_48px,
+                    true,
+                    () -> {
+                        vmConfig.guestRoot = true;
+                        VMManager.addVM(vmConfig, position);
+                        Toast.makeText(activity, "Guest root helper on. Start the VM to use it.", Toast.LENGTH_LONG).show();
+                    },
+                    null,
+                    null);
+        });
+        android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins((int) (16 * d), 0, (int) (16 * d), (int) (2 * d));
+        parent.addView(row, parent.indexOfChild(anchor), lp);
     }
 }

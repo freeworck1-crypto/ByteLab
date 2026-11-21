@@ -85,16 +85,16 @@ public class VmsHomeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     .load(new File(current.itemIcon))
                     .placeholder(R.drawable.ic_computer_180dp_with_padding)
                     .error(R.drawable.ic_computer_180dp_with_padding)
-                    .skipMemoryCache(true)
-                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    .signature(new com.bumptech.glide.signature.ObjectKey(new File(current.itemIcon).lastModified()))
+                    .override(360, 360)
                     .into(myHolder.ivIcon);
         } else if (VmFileManager.isScreenshotPngExists(current.vmID)) {
             Glide.with(activity.getApplicationContext())
                     .load(new File(VmFileManager.getScreenshotPng(current.vmID )))
                     .placeholder(R.drawable.ic_computer_180dp_with_padding)
                     .error(R.drawable.ic_computer_180dp_with_padding)
-                    .skipMemoryCache(true)
-                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    .signature(new com.bumptech.glide.signature.ObjectKey(new File(VmFileManager.getScreenshotPng(current.vmID)).lastModified()))
+                    .override(720, 405)
                     .into(myHolder.ivIcon);
         } else {
             VMManager.setIconWithName(myHolder.ivIcon, current.itemName);

@@ -31,6 +31,8 @@ public class DataRoms {
     public String creator;
     @SerializedName("verified")
     public boolean verified;
+    @SerializedName("rom_mirrors")
+    public String[] romMirrors;
     @SerializedName("rom_direct")
     public boolean romDirect;
     @SerializedName("rom_app")

@@ -21,6 +21,7 @@ import com.vectras.vm.settings.SettingsData;
 import com.vectras.vm.utils.CpuHelper;
 import com.vectras.vm.utils.DeviceUtils;
 import com.vectras.vm.utils.FileUtils;
+import com.vectras.vm.utils.QemuArgFixer;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class StartVM {
         if (VMManager.isNeedLoadMigrate() && FileUtils.isFileExists(VmFileManager.getSnapshotSh(Config.vmID))) {
             String snapshotParams = FileUtils.readAFile(VmFileManager.getSnapshotSh(Config.vmID)).replace("\n", "");
             if (VMManager.isthiscommandsafe(snapshotParams, activity)) {
+                snapshotParams = QemuArgFixer.fix(snapshotParams);
                 snapshotParams = removeQemuSystem(snapshotParams);
                 snapshotParams = removeQmpParams(snapshotParams);
                 snapshotParams = removeDisplayParams(snapshotParams);
@@ -56,7 +58,8 @@ public class StartVM {
             }
         }
 
-        String extraParams = vmData.itemExtra;
+        // Heal arguments saved by older builds (e.g. "-boot order=c,d") before anything reads them.
+        String extraParams = QemuArgFixer.fix(vmData.itemExtra);
 
         String machineParams = "";
         if (!ParamManager.hasMachine(extraParams)) {
@@ -154,6 +157,11 @@ public class StartVM {
             String netDevId = "netdev" + System.currentTimeMillis();
 
             networkParams = " -device " + network + ",netdev=" + netDevId + " -netdev user,id=" + netDevId;
+            // Guest-only root helper: forwards the guest's ADB port to localhost:5555 of THIS phone.
+            // QEMU "user" networking is NAT-isolated, so nothing else of the host is exposed.
+            if (vmConfigs.guestRoot) {
+                networkParams += ",hostfwd=tcp:127.0.0.1:5555-:5555";
+            }
         }
 
         String soundParams = "";
@@ -179,8 +187,9 @@ public class StartVM {
         String bootFromParams = Objects.requireNonNull(VMCreatorSelector.getBootFrom(activity, vmData.bootFrom).get("value")).toString();
         String showBootMenuParams = vmData.isShowBootMenu ? "menu=on" : "";
         String bootParams = "";
-        if (!bootFromParams.isEmpty() || !showBootMenuParams.isEmpty()) {
-            bootParams = " -boot " + bootFromParams + (!bootFromParams.isEmpty() && !showBootMenuParams.isEmpty() ? "," : "") + showBootMenuParams + " ";
+        // QEMU needs "order=cd" (one value). Skip ours when the VM's custom params already carry a -boot.
+        if ((!bootFromParams.isEmpty() || !showBootMenuParams.isEmpty()) && !QemuArgFixer.hasBoot(extraParams)) {
+            bootParams = " -boot " + (bootFromParams.isEmpty() ? "" : "order=" + bootFromParams) + (!bootFromParams.isEmpty() && !showBootMenuParams.isEmpty() ? "," : "") + showBootMenuParams + " ";
         }
 
         String accelParams = "";
@@ -205,7 +214,7 @@ public class StartVM {
 
         String bios = "";
 
-        String finalextra = extras;
+        String finalextra = QemuArgFixer.fix(extras);
 
         ArrayList<String> params = new ArrayList<>(Arrays.asList(qemu));
 

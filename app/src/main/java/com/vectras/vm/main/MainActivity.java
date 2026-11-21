@@ -894,44 +894,31 @@ public class MainActivity extends AppCompatActivity implements RomStoreFragment.
         bottomsheetdialogLoggerBinding.recyclerLog.setLayoutManager(layoutManager);
         mLogAdapter.scrollToLastPosition();
 
+        // Read logcat on background threads. The old code called the blocking readLine()
+        // on the UI thread, which froze the whole app while the log sheet was open.
         AtomicBoolean isStop = new AtomicBoolean(false);
+        streamLogcat(new String[]{"logcat", "*:E"}, "<font color='red'>[E] ", isStop);
+        streamLogcat(new String[]{"logcat", "*:W"}, "<font color='#FFC107'>[W] ", isStop);
 
-        try {
-            Process process = Runtime.getRuntime().exec("logcat -e");
-            BufferedReader bufferedReader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-            Process process2 = Runtime.getRuntime().exec("logcat -w");
-            BufferedReader bufferedReader2 = new BufferedReader(
-                    new InputStreamReader(process2.getInputStream()));
+        bottomSheetDialog.setOnDismissListener(menuItem1 -> isStop.set(true));
+    }
 
-
-            updateLogTask = new Runnable() {
-                @Override
-                public void run() {
-                    if (isStop.get()) return;
-
-                    try {
-                        if (bufferedReader.readLine() != null || bufferedReader2.readLine() != null) {
-                            String logLine = bufferedReader.readLine();
-                            String logLine2 = bufferedReader2.readLine();
-                            VectrasStatus.logError("<font color='red'>[E] " + logLine + "</font>");
-                            VectrasStatus.logError("<font color='#FFC107'>[W] " + logLine2 + "</font>");
-                        }
-                    } catch (IOException e) {
-                        Log.e(TAG, "Log: ", e);
-                    }
-                    handlerUpdateLog.postDelayed(this, 1000);
+    private void streamLogcat(String[] command, String prefix, AtomicBoolean stop) {
+        new Thread(() -> {
+            Process process = null;
+            try {
+                process = Runtime.getRuntime().exec(command);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                while (!stop.get() && (line = reader.readLine()) != null) {
+                    final String message = prefix + line + "</font>";
+                    runOnUiThread(() -> VectrasStatus.logError(message));
                 }
-            };
-
-            handlerUpdateLog.post(updateLogTask);
-        } catch (IOException e) {
-            Log.e(TAG, "Log: ", e);
-        }
-
-        bottomSheetDialog.setOnDismissListener(menuItem1 -> {
-            isStop.set(true);
-            handlerUpdateLog.removeCallbacks(updateLogTask);
-        });
+            } catch (IOException e) {
+                Log.e(TAG, "Log: ", e);
+            } finally {
+                if (process != null) process.destroy();
+            }
+        }, "bytelab-logcat").start();
     }
 }

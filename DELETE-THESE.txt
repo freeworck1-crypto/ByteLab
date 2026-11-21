@@ -1,0 +1,5 @@
+Safe to delete from the project (they are empty or leak secrets):
+  Run                      (empty file)
+  Get                      (empty file)
+  bytelab-release.jks      (signing key – never keep it in the repo; rotate it if the repo is public)
+  bytelab-base64.txt       (base64 copy of the signing key – same warning)
