@@ -75,6 +75,7 @@ public class AddIn {
 
     public void initialize(ActivityX11Binding binding) {
         this.binding = binding;
+        AndroidMode.prepare(activity); // Android phone: full screen + finger touch
         bindingControls = binding.controlsfragment;
         bindingDesktopControls = binding.controlsfragment.desktopcontrols;
         bindingGameControls = binding.controlsfragment.gamecontrols;
@@ -208,6 +209,8 @@ public class AddIn {
     private void showToolbar(boolean show) {
         bindingControls.lnToolBar.setVisibility(show ? View.VISIBLE : View.GONE);
         binding.lnBubbleContainer.setVisibility(show ? View.GONE : View.VISIBLE);
+        // Floating button of an Android phone stays faint so the screen looks like a real phone.
+        binding.btnBubble.setAlpha(AndroidMode.isActive(activity) ? 0.3f : 1f);
     }
 
     public boolean ctrlClicked = false;

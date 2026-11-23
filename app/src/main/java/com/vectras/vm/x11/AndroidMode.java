@@ -85,15 +85,34 @@ public final class AndroidMode {
 
     /** True when the VM that is being shown is an Android system, or the user forced the mode. */
     public static boolean isActive(Context c) {
-        if (sp(c).getBoolean(FORCE, false) || detectAndroidVm()) return true;
+        if (sp(c).getBoolean(FORCE, false)) return true;
+
+        String[] ids = {MainStartVM.lastVMID, MainStartVM.pendingVMID, Config.vmID};
         try {
-            // The auto-setup (AutoPilot) already recognised this VM as Android.
-            String p = c.getApplicationContext().getSharedPreferences("bytelab_autopilot", Context.MODE_PRIVATE)
-                    .getString("profile_" + Config.vmID, "");
-            return "android".equals(p);
-        } catch (Throwable t) {
-            return false;
+            SharedPreferences auto = c.getApplicationContext()
+                    .getSharedPreferences("bytelab_autopilot", Context.MODE_PRIVATE);
+            for (String id : ids) {
+                if (id == null || id.isEmpty()) continue;
+                // Remembered from an earlier run, or recognised by the auto-setup (name + disc file).
+                if (sp(c).getBoolean("android_vm_" + id, false)
+                        || "android".equals(auto.getString("profile_" + id, ""))) {
+                    remember(c, id);
+                    return true;
+                }
+            }
+        } catch (Throwable ignored) {
         }
+
+        if (detectAndroidVm()) {
+            remember(c, MainStartVM.lastVMID);
+            return true;
+        }
+        return false;
+    }
+
+    private static void remember(Context c, String id) {
+        if (id == null || id.isEmpty()) return;
+        sp(c).edit().putBoolean("android_vm_" + id, true).apply();
     }
 
     private static boolean defaultFor(boolean android, String key) {
@@ -119,10 +138,8 @@ public final class AndroidMode {
         SharedPreferences x11 = PreferenceManager.getDefaultSharedPreferences(c);
         SharedPreferences.Editor e = x11.edit();
         e.putBoolean("fullscreen", true);
-        if (!sp(c).getBoolean("touch_mode_set", false)) {
-            e.putString("touchMode", "2");
-            sp(c).edit().putBoolean("touch_mode_set", true).apply();
-        }
+        // "2" = simulated touchscreen: the finger taps exactly where it touches (no mouse pointer moving around).
+        e.putString("touchMode", "2");
         e.apply();
     }
 
