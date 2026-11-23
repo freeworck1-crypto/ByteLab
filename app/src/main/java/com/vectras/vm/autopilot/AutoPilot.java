@@ -30,6 +30,8 @@ public final class AutoPilot {
 
     public static final String PROFILE_WINDOWS = "windows";
     public static final String PROFILE_ANDROID = "android";
+    /** Android that is already installed on its disk (a "ready image"): no ISO, GRUB menu only. */
+    public static final String PROFILE_ANDROID_DISK = "android-disk";
     public static final String PROFILE_LINUX = "linux";
     public static final String PROFILE_ALPINE = "alpine";
 
@@ -63,6 +65,10 @@ public final class AutoPilot {
         boolean bootsFromDisc = (cfg.imgCdrom != null && !cfg.imgCdrom.isEmpty())
                 || name.toLowerCase(Locale.ROOT).contains(".iso");
         String profile = bootsFromDisc ? profileFor(name) : null;
+        if (profile == null && !bootsFromDisc
+                && (cfg.itemName == null ? "" : cfg.itemName).toLowerCase(Locale.ROOT).contains("android")) {
+            profile = PROFILE_ANDROID_DISK;
+        }
         p.edit().putString(key, profile == null ? "" : profile).putInt("runs_" + cfg.vmID, 0).apply();
         return profile;
     }
@@ -114,7 +120,8 @@ public final class AutoPilot {
 
         int runs = p.getInt("runs_" + vmId, 0);
         // Only the first boots need help (install boot, then first boot after the install).
-        if (runs >= MAX_ASSISTED_BOOTS) return;
+        // A ready Android image needs the same boot option on every start.
+        if (runs >= MAX_ASSISTED_BOOTS && !PROFILE_ANDROID_DISK.equals(profile)) return;
         p.edit().putInt("runs_" + vmId, runs + 1).apply();
 
         // Emulated boots are slower on phones with few cores: wait proportionally longer.
@@ -218,6 +225,17 @@ public final class AutoPilot {
                     // If the menu was not ready, a plain Enter still starts the first entry.
                     s.add(keys(25, 2, 6, "ret"));
                 }
+                break;
+            case PROFILE_ANDROID_DISK:
+                // GRUB menu of the installed Android: edit the kernel line of the first entry, add the
+                // graphics options that stop the freeze on the Android logo, then boot it.
+                s.add(keys(3, 1, 0, "e"));
+                s.add(keys(1, 1, 0, "down"));
+                s.add(keys(0.5f, 1, 0, "e"));
+                s.add(type(1, " nomodeset vga=788 HWACCEL=0\n"));
+                s.add(keys(1, 1, 0, "b"));
+                // If the menu was still waiting, Enter boots the default entry.
+                s.add(keys(10, 1, 0, "ret"));
                 break;
             case PROFILE_LINUX:
                 if (run == 0) {

@@ -240,6 +240,22 @@ public class ExportRomActivity extends AppCompatActivity {
 
         vmConfigMap.put("versioncode", PackageUtils.getThisVersionCode(getApplicationContext()));
 
+        // "Ready image": an Android VM that already has its own disk is exported without the installer
+        // ISO and set to boot from the disk, so the imported copy opens straight into Android.
+        final boolean readyImage = current.itemName != null
+                && current.itemName.toLowerCase(java.util.Locale.ROOT).contains("android")
+                && !String.valueOf(vmConfigMap.get("drive")).isEmpty()
+                && !"null".equals(String.valueOf(vmConfigMap.get("drive")));
+        if (readyImage) {
+            vmConfigMap.put("cdrom", "");
+            vmConfigMap.put("cdrom1", "");
+            vmConfigMap.put("bootFrom", 1); // 1 = hard disk
+            Object q = vmConfigMap.get("qemu");
+            if (q != null) {
+                vmConfigMap.put("qemu", q.toString().replaceAll("-cdrom\\s+('[^']*'|\"[^\"]*\"|\\S+)", "").trim());
+            }
+        }
+
         String tempFolder = VmFileManager.getTempPath(this, current.vmID + "/export");
 
         FileUtils.writeToFile(tempFolder, "rom-data.json", new Gson().toJson(vmConfigMap));
@@ -270,6 +286,8 @@ public class ExportRomActivity extends AppCompatActivity {
                         pathList.add(tempFolder + VmFileManager.CREATE_COMMAND_CONFIG_FILE_NAME);
                     } else if (_filelist.get(_repeat).endsWith(VmFileManager.SCREENSHOT_PNG_FILE_NAME) || _filelist.get(_repeat).endsWith(VmFileManager.AUDIO_STREAM_FILE_NAME)) {
                         //ignore
+                    } else if (readyImage && _filelist.get(_repeat).toLowerCase(java.util.Locale.ROOT).endsWith(".iso")) {
+                        // installer ISO is not needed in a ready image
                     } else {
                         pathList.add(_filelist.get(_repeat));
                     }

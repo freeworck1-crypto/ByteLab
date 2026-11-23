@@ -95,7 +95,7 @@ public final class AndroidMode {
                 if (id == null || id.isEmpty()) continue;
                 // Remembered from an earlier run, or recognised by the auto-setup (name + disc file).
                 if (sp(c).getBoolean("android_vm_" + id, false)
-                        || "android".equals(auto.getString("profile_" + id, ""))) {
+                        || auto.getString("profile_" + id, "").startsWith("android")) {
                     remember(c, id);
                     return true;
                 }
