@@ -114,8 +114,14 @@ public class StartVM {
             int cores = Integer.parseInt(Objects.requireNonNull(VMCreatorSelector.getCpuCore(MainSettingsManager.getArch(activity), vmConfigs.cores).get("value")).toString());
             int threads = Math.max(1, vmConfigs.threads + 1);
 
-            if (cores * threads > cpuHelper.getCpuThreads()) {
-                cpuParams += " -smp sockets=1,cores=" + cpuHelper.getCpuCores() + ",threads=1";
+            // Keep 2 phone cores free for the app itself. When the emulator takes every core the whole
+            // UI (menus, taps, scrolling) becomes very slow.
+            int hostThreads = Math.max(1, cpuHelper.getCpuThreads());
+            int vmBudget = hostThreads >= 6 ? hostThreads - 2 : Math.max(1, hostThreads - 1);
+
+            if (cores * threads > vmBudget) {
+                int usable = Math.max(1, Math.min(cpuHelper.getCpuCores(), vmBudget));
+                cpuParams += " -smp sockets=1,cores=" + usable + ",threads=1";
             } else {
                 cpuParams += " -smp sockets=1,cores=" + cores + ",threads=" + threads;
             }
@@ -196,6 +202,21 @@ public class StartVM {
         String accel = Objects.requireNonNull(VMCreatorSelector.getAccel(activity, vmData.accel).get("value")).toString();
         if (!accel.isEmpty()) {
             accelParams = " -accel " + ((vmData.accel > 1 && !DeviceUtils.is64bit()) ? Objects.requireNonNull(VMCreatorSelector.getAccel(activity, 1).get("value")).toString() : accel);
+        }
+
+        // Android guests: a plain VGA card and a modern CPU model stop the freeze on the Android logo.
+        String guestHint = ((vmData.itemName == null ? "" : vmData.itemName) + " "
+                + (vmData.imgCdrom == null ? "" : vmData.imgCdrom) + " " + extraParams).toLowerCase(java.util.Locale.ROOT);
+        String archNow = MainSettingsManager.getArch(activity);
+        if (guestHint.contains("android") && (archNow.equals("X86_64") || archNow.equals("I386"))) {
+            if (!extraParams.contains("-vga")) {
+                graphicsParams = " -vga std";
+            } else {
+                graphicsParams = "";
+            }
+            if (!ParamManager.hasCpu(extraParams) && !cpuParams.contains("-cpu")) {
+                cpuParams = " -cpu max " + cpuParams;
+            }
         }
 
         extraParams = machineParams + inputDevicesParams + cpuParams + memoryParams + bootParams + graphicsParams + networkParams + soundParams + accelParams + " " + extraParams;

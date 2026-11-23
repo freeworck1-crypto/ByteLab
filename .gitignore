@@ -88,3 +88,7 @@ lint/tmp/
 
 README.html
 >>>>>>> c0dd0c334c2b69978b5e8f1c99558db65ea2f721
+bytelab-release.jks
+bytelab-base64.txt
+local.properties
+build/

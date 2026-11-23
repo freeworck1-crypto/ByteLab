@@ -11,6 +11,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.preference.PreferenceManager;
 
+import com.vectras.qemu.Config;
 import com.vectras.vm.main.core.MainStartVM;
 import com.vectras.vm.manager.QmpSender;
 
@@ -84,12 +85,20 @@ public final class AndroidMode {
 
     /** True when the VM that is being shown is an Android system, or the user forced the mode. */
     public static boolean isActive(Context c) {
-        return sp(c).getBoolean(FORCE, false) || detectAndroidVm();
+        if (sp(c).getBoolean(FORCE, false) || detectAndroidVm()) return true;
+        try {
+            // The auto-setup (AutoPilot) already recognised this VM as Android.
+            String p = c.getApplicationContext().getSharedPreferences("bytelab_autopilot", Context.MODE_PRIVATE)
+                    .getString("profile_" + Config.vmID, "");
+            return "android".equals(p);
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private static boolean defaultFor(boolean android, String key) {
-        if (android) return key.equals(SWIPE) || key.equals(AUTO_ENTER);
-        return !(key.equals(SWIPE) || key.equals(AUTO_ENTER));
+        if (android) return key.equals(SWIPE);
+        return !key.equals(SWIPE);
     }
 
     public static boolean get(Context c, String key) {
@@ -128,21 +137,8 @@ public final class AndroidMode {
         }).start();
     }
 
-    /** Presses Enter a couple of times so the Android ISO boot menu is skipped. */
+    /** The boot menu is handled by AutoPilot; nothing to do here (kept so existing calls still compile). */
     public static void onVmStarted(Context c) {
-        if (!isActive(c) || !get(c, AUTO_ENTER)) return;
-        String env = MainStartVM.lastEnv == null ? "" : MainStartVM.lastEnv;
-        if (!(env.contains("-cdrom") || env.contains("media=cdrom"))) return;
-
-        new Thread(() -> {
-            try {
-                for (int i = 0; i < 2; i++) {
-                    Thread.sleep(3000);
-                    QmpSender.send("sendkey " + KEY_ENTER);
-                }
-            } catch (Throwable ignored) {
-            }
-        }).start();
     }
 
     // ---------------------------------------------------------------- swipe bridge
@@ -196,12 +192,11 @@ public final class AndroidMode {
             "Windows key",
             "Mouse buttons (left / middle / right)",
             "Top toolbar always visible (off = small floating button)",
-            "Swipe from screen edge goes to the virtual phone",
-            "Press Enter automatically on the boot menu"
+            "Swipe from screen edge goes to the virtual phone"
     };
 
     private static final String[] KEYS = {
-            FORCE, ARROWS, FUNC_KEYS, TAB, WIN, MOUSE, TOOLBAR, SWIPE, AUTO_ENTER
+            FORCE, ARROWS, FUNC_KEYS, TAB, WIN, MOUSE, TOOLBAR, SWIPE
     };
 
     public static void showCustomizeDialog(Activity activity, Runnable onApplied) {

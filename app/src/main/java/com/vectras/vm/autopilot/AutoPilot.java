@@ -173,6 +173,7 @@ public final class AutoPilot {
             case '-': return "minus";
             case '_': return "shift-minus";
             case '.': return "dot";
+            case '=': return "equal";
             case '/': return "slash";
             case ':': return "shift-semicolon";
             default: return null;
@@ -209,8 +210,13 @@ public final class AutoPilot {
                 break;
             case PROFILE_ANDROID:
                 if (run == 0) {
-                    // Boot menu: first entry = "Live CD - Run Android-x86 without installation".
-                    s.add(keys(6, 3, 4, "ret"));
+                    // Android-x86 boot menu (isolinux). Android often freezes on the Android logo when the
+                    // guest tries to use a GPU that QEMU does not have. Edit the boot line (Tab) and force
+                    // the plain VESA framebuffer + software rendering, then boot.
+                    s.add(keys(7, 1, 0, "tab"));
+                    s.add(type(1.5f, " nomodeset vga=788 HWACCEL=0\n"));
+                    // If the menu was not ready, a plain Enter still starts the first entry.
+                    s.add(keys(25, 2, 6, "ret"));
                 }
                 break;
             case PROFILE_LINUX:
