@@ -459,6 +459,12 @@ public class RomInfo extends AppCompatActivity {
         config.itemPath = vmDisk == null ? downloaded.getAbsolutePath() : vmDisk.getAbsolutePath();
         config.imgCdrom = vmDisk == null ? "" : downloaded.getAbsolutePath();
         config.itemExtra = vmDisk == null ? "" : "-boot order=cd -vga std";
+        // Android-x86 "disk" images (.img) are EFI images: they need UEFI and boot from the image itself.
+        if (vmDisk == null && config.itemName != null
+                && config.itemName.toLowerCase(Locale.ROOT).contains("android")
+                && arch != null && arch.toUpperCase(Locale.ROOT).contains("X86_64")) {
+            config.isUseUefi = true;
+        }
         config.memory = getIntent().getStringExtra("romCategory") != null
                 && "windows".equalsIgnoreCase(getIntent().getStringExtra("romCategory")) ? 4096 : 2048;
         config.cores = 1;

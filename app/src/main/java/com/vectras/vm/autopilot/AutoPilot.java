@@ -65,7 +65,7 @@ public final class AutoPilot {
         boolean bootsFromDisc = (cfg.imgCdrom != null && !cfg.imgCdrom.isEmpty())
                 || name.toLowerCase(Locale.ROOT).contains(".iso");
         String profile = bootsFromDisc ? profileFor(name) : null;
-        if (profile == null && !bootsFromDisc
+        if (profile == null && !bootsFromDisc && !cfg.isUseUefi
                 && (cfg.itemName == null ? "" : cfg.itemName).toLowerCase(Locale.ROOT).contains("android")) {
             profile = PROFILE_ANDROID_DISK;
         }
