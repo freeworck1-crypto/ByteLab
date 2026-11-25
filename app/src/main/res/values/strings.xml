@@ -1243,7 +1243,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
 
     <!-- NIAZNIX branding and permissions -->
     <string name="made_by_niaznix">Designed &amp; developed by NIAZNIX</string>
-    <string name="a_niaznix_product">ByteLab is a NIAZNIX product</string>
+    <string name="a_niaznix_product">Built by NIAZNIX</string>
     <string name="based_on_credit">Built on open-source software: Vectras VM (GPL-2.0) by Noureldeen Elsayed, QEMU and others. See Open source licenses.</string>
     <string name="app_permissions">App permissions</string>
     <string name="app_permissions_intro">Grant only what you need. ByteLab never turns these on by itself.</string>

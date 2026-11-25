@@ -22,6 +22,18 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # shell-loader reads ~/.android/debug.keystore while Gradle is configuring,
+      # so it must exist before any Gradle command runs.
+      - name: Create default debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storetype PKCS12 \
+              -storepass android -alias AndroidDebugKey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
@@ -51,11 +63,16 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/bytelab-signing/bytelab-release.jks"
           test -s "$RUNNER_TEMP/bytelab-signing/bytelab-release.jks"
           echo "HAS_KEY=true" >> "$GITHUB_ENV"
+          echo "BYTELAB_KEYSTORE_FILE=$RUNNER_TEMP/bytelab-signing/bytelab-release.jks" >> "$GITHUB_ENV"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
+        env:
+          BYTELAB_STORE_PASSWORD: ${{ secrets.BYTELAB_STORE_PASSWORD }}
+          BYTELAB_KEY_ALIAS: ${{ secrets.BYTELAB_KEY_ALIAS }}
+          BYTELAB_KEY_PASSWORD: ${{ secrets.BYTELAB_KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
           VERSION_CODE=$((157 + GITHUB_RUN_NUMBER))
@@ -71,7 +88,6 @@ jobs:
       - name: Build signed release APKs
         if: env.HAS_KEY == 'true'
         env:
-          BYTELAB_KEYSTORE_FILE: ${{ runner.temp }}/bytelab-signing/bytelab-release.jks
           BYTELAB_STORE_PASSWORD: ${{ secrets.BYTELAB_STORE_PASSWORD }}
           BYTELAB_KEY_ALIAS: ${{ secrets.BYTELAB_KEY_ALIAS }}
           BYTELAB_KEY_PASSWORD: ${{ secrets.BYTELAB_KEY_PASSWORD }}
