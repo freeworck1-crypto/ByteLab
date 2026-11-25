@@ -27,4 +27,20 @@
         <item name="layout_collapseMode">pin</item>
         <item name="navigationIcon">@drawable/arrow_back_rounded_24px</item>
     </style>
+
+    <!-- ByteLab shape scale: crisper than stock Material -->
+    <style name="BL.Shape.Small" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="BL.Shape.Medium" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">14dp</item>
+    </style>
+
+    <style name="BL.Shape.Large" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
 </resources>

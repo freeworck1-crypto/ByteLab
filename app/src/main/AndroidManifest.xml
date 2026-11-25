@@ -223,6 +223,10 @@
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:exported="false" />
         <activity
+            android:name=".credits.CreditsActivity"
+            android:exported="false"
+            android:label="@string/credits_title" />
+        <activity
             android:name=".AboutActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:exported="true"

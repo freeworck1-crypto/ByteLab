@@ -17,7 +17,7 @@
 <!--        <item name="android:windowAnimationStyle">@style/ActivityAnimation</item>-->
         <item name="actionOverflowButtonStyle">@style/AppTheme.Toolbar.OverflowButton</item>
         <!--<item name="fontFamily">@font/josefin_sans</item>-->
-        <item name="fontFamily">@font/googlesansflex</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="chipStyle">@style/AppTheme.WidgetGroupChip</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="windowActionBarOverlay">true</item>
@@ -28,30 +28,37 @@
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
         <item name="materialSwitchStyle">@style/App.MaterialSwitch</item>
         <item name="colorCard">?attr/colorSurfaceContainerHigh</item>
-        <!-- ByteLab colours -->
-        <item name="colorPrimary">#7FD6C9</item>
-        <item name="colorOnPrimary">#003732</item>
-        <item name="colorPrimaryContainer">#0F4F49</item>
-        <item name="colorOnPrimaryContainer">#BDEBE3</item>
-        <item name="colorSecondary">#F0C65A</item>
-        <item name="colorOnSecondary">#3E2E00</item>
-        <item name="colorSecondaryContainer">#5A4300</item>
-        <item name="colorOnSecondaryContainer">#FFE08A</item>
-        <item name="colorTertiary">#F0C65A</item>
-        <item name="colorTertiaryContainer">#5A4300</item>
-        <item name="colorOnTertiaryContainer">#FFE08A</item>
-        <item name="android:colorBackground">#0E1716</item>
-        <item name="colorSurface">#0E1716</item>
-        <item name="colorOnBackground">#E4EAE8</item>
-        <item name="colorOnSurface">#E4EAE8</item>
-        <item name="colorSurfaceVariant">#2A3B38</item>
-        <item name="colorOnSurfaceVariant">#A9BAB6</item>
-        <item name="colorSurfaceContainerLowest">#0A1211</item>
-        <item name="colorSurfaceContainerLow">#131F1E</item>
-        <item name="colorSurfaceContainer">#182625</item>
-        <item name="colorSurfaceContainerHigh">#1E2F2D</item>
-        <item name="colorSurfaceContainerHighest">#253837</item>
-        <item name="colorOutline">#5F7570</item>
+        <!-- ByteLab colours: "Ink & Coral" (dark) -->
+        <item name="colorPrimary">#BDB5FF</item>
+        <item name="colorOnPrimary">#271B91</item>
+        <item name="colorPrimaryContainer">#3A2FB0</item>
+        <item name="colorOnPrimaryContainer">#E4E0FF</item>
+        <item name="colorSecondary">#FFB5A0</item>
+        <item name="colorOnSecondary">#5E1708</item>
+        <item name="colorSecondaryContainer">#7B2C16</item>
+        <item name="colorOnSecondaryContainer">#FFDCD2</item>
+        <item name="colorTertiary">#BCD85A</item>
+        <item name="colorOnTertiary">#243300</item>
+        <item name="colorTertiaryContainer">#374D00</item>
+        <item name="colorOnTertiaryContainer">#D8F27A</item>
+        <item name="colorError">#FFB2BE</item>
+        <item name="android:colorBackground">#0F0E18</item>
+        <item name="colorSurface">#0F0E18</item>
+        <item name="colorOnBackground">#E7E4F2</item>
+        <item name="colorOnSurface">#E7E4F2</item>
+        <item name="colorSurfaceVariant">#2E2C3D</item>
+        <item name="colorOnSurfaceVariant">#C9C6DA</item>
+        <item name="colorSurfaceContainerLowest">#0A0911</item>
+        <item name="colorSurfaceContainerLow">#151420</item>
+        <item name="colorSurfaceContainer">#1A1926</item>
+        <item name="colorSurfaceContainerHigh">#242331</item>
+        <item name="colorSurfaceContainerHighest">#2F2E3D</item>
+        <item name="colorOutline">#928FA6</item>
+        <item name="colorOutlineVariant">#454357</item>
+        <!-- ByteLab shapes -->
+        <item name="shapeAppearanceSmallComponent">@style/BL.Shape.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/BL.Shape.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/BL.Shape.Large</item>
     </style>
 
     <!-- See https://developer.android.com/training/material/theme.html for how to customize the Material theme. -->

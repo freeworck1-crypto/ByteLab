@@ -62,18 +62,18 @@ public class AndroidSystemPickerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         pickImage = registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::importCustomImage);
 
-        getWindow().setStatusBarColor(Color.parseColor("#0E1716"));
-        getWindow().setNavigationBarColor(Color.parseColor("#0E1716"));
+        getWindow().setStatusBarColor(Color.parseColor("#0F0E18"));
+        getWindow().setNavigationBarColor(Color.parseColor("#0F0E18"));
 
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.parseColor("#0E1716"));
+        root.setBackgroundColor(Color.parseColor("#0F0E18"));
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             v.setPadding(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
             return insets;
         });
 
         web = new WebView(this);
-        web.setBackgroundColor(Color.parseColor("#0E1716"));
+        web.setBackgroundColor(Color.parseColor("#0F0E18"));
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);

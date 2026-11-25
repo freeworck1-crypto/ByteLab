@@ -2,10 +2,11 @@ package com.vectras.vm.manager;
 
 import android.content.Context;
 
-import com.vectras.vterm.Terminal2;
+import com.vectras.vm.utils.QemuProcessUtils;
 
 public class ProcessManager {
+    /** Fast check (reads /proc, no shell). The context argument is kept for existing callers. */
     public static boolean isQemuRunning(Context context) {
-        return new Terminal2(context).executeOnThisThread("ps -e").contains("qemu-system-");
+        return QemuProcessUtils.isQemuRunning();
     }
 }

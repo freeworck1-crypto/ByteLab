@@ -487,7 +487,7 @@
     <string name="note_for_selecting_i386">可以以比 x86_64 更高的兼容性运行旧的 x86 操作系统。</string>
     <string name="note_for_selecting_ppc">可以运行为 PowerPC 架构设计的较旧版本 macOS 以及其他操作系统。</string>
     <string name="note_for_selecting_import">您可以导入采用CVBI格式的虚拟机整合包</string>
-    <string name="note_for_selecting_qemu">深入了解开源虚拟机QEMU</string>
+    <string name="note_for_selecting_qemu">深入了解虚拟机QEMU</string>
     <string name="create_command">创建命令</string>
     <string name="note_for_selecting_create_command">为ByteLab新建虚拟机实现更便利的个性化</string>
     <string name="import_or_choose_an_architecture_to_start_creating">选择CPU架构或导入虚拟机</string>
@@ -909,7 +909,7 @@
     <string name="divider">分隔线</string>
     <string name="file_picker_divier_note">在项目之间添加分隔线。</string>
     <string name="storage_note">驱动器、共享文件夹……</string>
-    <string name="open_source_licenses">开源许可证</string>
+    <string name="open_source_licenses">致谢</string>
     <string name="board_note">处理器、核心、线程……</string>
     <string name="firmware">固件</string>
     <string name="firmware_note">UEFI、启动源、启动菜单……</string>

@@ -308,7 +308,7 @@
     <string name="note_for_selecting_i386">You can run older x86 operating systems with greater compatibility than x86_64.</string>
     <string name="note_for_selecting_ppc">You can run older versions of Mac OS and other operating systems intended for the PowerPC architecture.</string>
     <string name="note_for_selecting_import">You can import now by selecting the file in cvbi format.</string>
-    <string name="note_for_selecting_qemu">Learn more about this open source emulator.</string>
+    <string name="note_for_selecting_qemu">Learn more about this emulator.</string>
     <string name="create_command">Param Notebook</string>
     <string name="note_for_selecting_create_command">Create new virtual machines for ByteLab with easier customization.</string>
     <string name="import_or_choose_an_architecture_to_start_creating">Import or choose an architecture to start creating.</string>
@@ -659,7 +659,7 @@
     <string name="divider">Divider</string>
     <string name="file_picker_divier_note">Add dividers between items.</string>
     <string name="storage_note">Drives, shared folder,…</string>
-    <string name="open_source_licenses">Open source licenses</string>
+    <string name="open_source_licenses">Credits</string>
     <string name="terms_of_service">Terms of service</string>
     <string name="privacy_policy">Privacy policy</string>
     <string name="legal_document_loading">Loading document…</string>
@@ -1244,7 +1244,6 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <!-- NIAZNIX branding and permissions -->
     <string name="made_by_niaznix">Designed &amp; developed by NIAZNIX</string>
     <string name="a_niaznix_product">Built by NIAZNIX</string>
-    <string name="based_on_credit">Built on open-source software: Vectras VM (GPL-2.0) by Noureldeen Elsayed, QEMU and others. See Open source licenses.</string>
     <string name="app_permissions">App permissions</string>
     <string name="app_permissions_intro">Grant only what you need. ByteLab never turns these on by itself.</string>
     <string name="perm_status_granted">Allowed</string>
@@ -1275,4 +1274,12 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="perm_wifi_desc">Network access for downloads and the virtual phone.</string>
     <string name="perm_adb_title">ADB / Wireless debugging</string>
     <string name="perm_adb_desc">Turn on in Developer options. Needed for advanced tools.</string>
+    <!-- Credits page (the only place that names third-party software) -->
+    <string name="credits_title">Credits</string>
+    <string name="credits_built_by">Built by NIAZNIX</string>
+    <string name="credits_intro">ByteLab is free to use. It stands on the work of the people and projects below, and we are grateful to every one of them.</string>
+    <string name="credits_licence_note">Each component remains under its own licence. Full licence texts and the source code for the components that require it are available from the ByteLab source repository.</string>
+    <string name="credits_source_code">Source code and licences</string>
+    <string name="credits_all_libraries">All library licences</string>
+    <string name="credits_footer">ByteLab · Built by NIAZNIX</string>
 </resources>

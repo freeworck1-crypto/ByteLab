@@ -1,0 +1,2 @@
+Optional (saves 7 MB, no longer used):
+  app/src/main/res/font/googlesansflex.ttf

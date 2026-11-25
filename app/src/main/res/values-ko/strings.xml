@@ -291,7 +291,7 @@
     <string name="note_for_selecting_i386">x86_64보다 더 높은 호환성으로 오래된 x86 운영 체제를 실행할 수 있습니다.</string>
     <string name="note_for_selecting_ppc">PowerPC 아키텍처용 이전 Mac OS 버전과 기타 운영 체제를 실행할 수 있습니다.</string>
     <string name="note_for_selecting_import">cvbi 형식 파일을 선택해 지금 가져올 수 있습니다.</string>
-    <string name="note_for_selecting_qemu">이 오픈 소스 에뮬레이터에 대해 자세히 알아보세요.</string>
+    <string name="note_for_selecting_qemu">이 에뮬레이터에 대해 자세히 알아보세요.</string>
     <string name="create_command">Param Notebook</string>
     <string name="note_for_selecting_create_command">더 쉽게 사용자 지정하여 ByteLab용 새 가상 머신을 만듭니다.</string>
     <string name="import_or_choose_an_architecture_to_start_creating">가져오거나 아키텍처를 선택해 만들기를 시작하세요.</string>

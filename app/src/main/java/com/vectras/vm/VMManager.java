@@ -861,14 +861,9 @@ public class VMManager {
     }
 
     public static boolean isVMRunning(Context context, String vmID) {
-        String result = new Terminal2(context).executeOnThisThread("ps -e");
-        if (result.contains(" -qmp unix:" + Config.getLocalQMPSocketPath(vmID))) {
-            Log.d("VMManager.isThisVMRunning", "Yes.\n\n" + result);
-            return true;
-        } else {
-            Log.d("VMManager.isThisVMRunning", "No.\n\n" + result);
-            return false;
-        }
+        boolean running = com.vectras.vm.utils.QemuProcessUtils.isRunningWith(" -qmp unix:" + Config.getLocalQMPSocketPath(vmID));
+        Log.d("VMManager.isThisVMRunning", running ? "Yes" : "No");
+        return running;
     }
 
     public static boolean isVMRunning(String vmID) {
@@ -909,17 +904,24 @@ public class VMManager {
             progressDialog.setText(activity.getString(R.string.shutting_down));
             progressDialog.show();
             new Thread(() -> {
-                killallqemuprocesses(activity);
-                activity.runOnUiThread(() -> {
-                    progressDialog.reset();
-                    if (runnable != null) runnable.run();
-                });
-            }).start();
+                try {
+                    killallqemuprocesses(activity);
+                } catch (Throwable t) {
+                    Log.e("VMManager", "kill all failed", t);
+                } finally {
+                    // Always give the screen back, even if something above went wrong.
+                    activity.runOnUiThread(() -> {
+                        progressDialog.reset();
+                        if (runnable != null) runnable.run();
+                    });
+                }
+            }, "bytelab-stop").start();
                 }, null, null);
     }
 
+    /** Stops all QEMU processes straight from /proc (no PRoot shell, never hangs). */
     public static void killallqemuprocesses(Context context) {
-        new Terminal2(context).executeOnThisThread("pkill -15 -f qemu-system-; sleep 1; pkill -9 -f qemu-system-");
+        com.vectras.vm.utils.QemuProcessUtils.killAll();
     }
 
     public static String startMigrate() {

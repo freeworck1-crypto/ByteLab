@@ -101,7 +101,7 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
         });
 
         findViewById(R.id.btn_permissions).setOnClickListener(v -> startActivity(new Intent(this, com.niaznix.bytelab.PermissionsActivity.class)));
-        findViewById(R.id.btn_open_source_licenses).setOnClickListener(v -> startActivity(new Intent(this, OssLicensesMenuActivity.class)));
+        findViewById(R.id.btn_open_source_licenses).setOnClickListener(v -> startActivity(new Intent(this, com.vectras.vm.credits.CreditsActivity.class)));
         findViewById(R.id.btn_terms).setOnClickListener(v -> showLegalDocument(
                 R.string.terms_of_service, AppConfig.vectrasTerms, "TERMSOFSERVICE.md"));
         findViewById(R.id.btn_privacy).setOnClickListener(v -> showLegalDocument(

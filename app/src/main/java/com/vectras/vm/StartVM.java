@@ -202,6 +202,13 @@ public class StartVM {
         String accel = Objects.requireNonNull(VMCreatorSelector.getAccel(activity, vmData.accel).get("value")).toString();
         if (!accel.isEmpty()) {
             accelParams = " -accel " + ((vmData.accel > 1 && !DeviceUtils.is64bit()) ? Objects.requireNonNull(VMCreatorSelector.getAccel(activity, 1).get("value")).toString() : accel);
+            // Speed: a bigger translation-block cache lets the emulator re-use translated code instead
+            // of translating it again and again (noticeable on Android guests). Skipped if the user
+            // already set tb-size themselves.
+            if (accelParams.contains("tcg") && !accelParams.contains("tb-size") && !extraParams.contains("tb-size")) {
+                accelParams = accelParams.trim() + ",tb-size=256 ";
+                accelParams = " " + accelParams;
+            }
         }
 
         // Android guests: a plain VGA card and a modern CPU model stop the freeze on the Android logo.

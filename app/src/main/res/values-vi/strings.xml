@@ -297,7 +297,7 @@
     <string name="note_for_selecting_i386">Bạn có thể chạy các hệ điều hành x86 cũ hơn với khả năng tương thích cao hơn so với x86_64.</string>
     <string name="note_for_selecting_ppc">Bạn có thể chạy các phiên bản Mac OS cũ hơn và các hệ điều hành khác được thiết kế cho kiến trúc PowerPC.</string>
     <string name="note_for_selecting_import">Bạn có thể nhập ngay bằng cách chọn tệp ở định dạng cvbi.</string>
-    <string name="note_for_selecting_qemu">Tìm hiểu thêm về trình giả lập mã nguồn mở này.</string>
+    <string name="note_for_selecting_qemu">Tìm hiểu thêm về trình giả lập này.</string>
     <string name="create_command">Param Notebook</string>
     <string name="note_for_selecting_create_command">Tạo máy ảo mới cho ByteLab với khả năng tùy chỉnh dễ dàng hơn.</string>
     <string name="import_or_choose_an_architecture_to_start_creating">Nhập hoặc chọn một kiến trúc để bắt đầu tạo.</string>
@@ -636,7 +636,7 @@
     <string name="divider">Đường phân cách</string>
     <string name="file_picker_divier_note">Thêm các đường phân cách giữa các mục.</string>
     <string name="storage_note">Các ổ lưu trữ, thư mục được chia sẻ,…</string>
-    <string name="open_source_licenses">Giấy phép nguồn mở</string>
+    <string name="open_source_licenses">Ghi công</string>
     <string name="board_note">Bộ xử lý, nhân, luồng,…</string>
     <string name="firmware">Phần mềm</string>
     <string name="firmware_note">UEFI, khởi động từ, tuỳ chọn khởi động,…</string>

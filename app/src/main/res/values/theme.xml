@@ -16,7 +16,7 @@
         <item name="checkboxStyle">@style/MyCheckBoxStyle</item>
 <!--        <item name="android:windowAnimationStyle">@style/ActivityAnimation</item>-->
         <item name="actionOverflowButtonStyle">@style/AppTheme.Toolbar.OverflowButton</item>
-        <item name="fontFamily">@font/googlesansvodevariablefontwght</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="chipStyle">@style/AppTheme.WidgetGroupChip</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="windowActionBarOverlay">true</item>
@@ -27,30 +27,37 @@
         <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
         <item name="materialSwitchStyle">@style/App.MaterialSwitch</item>
         <item name="colorCard">?attr/colorSurfaceContainerLowest</item>
-        <!-- ByteLab colours -->
-        <item name="colorPrimary">#1F6F66</item>
+        <!-- ByteLab colours: "Ink & Coral" (light) -->
+        <item name="colorPrimary">#4B3FD6</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorPrimaryContainer">#BDEBE3</item>
-        <item name="colorOnPrimaryContainer">#00201D</item>
-        <item name="colorSecondary">#8A6A00</item>
+        <item name="colorPrimaryContainer">#E4E0FF</item>
+        <item name="colorOnPrimaryContainer">#150C5E</item>
+        <item name="colorSecondary">#E4572E</item>
         <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="colorSecondaryContainer">#FFE08A</item>
-        <item name="colorOnSecondaryContainer">#2A1F00</item>
-        <item name="colorTertiary">#8A6A00</item>
-        <item name="colorTertiaryContainer">#FFE08A</item>
-        <item name="colorOnTertiaryContainer">#2A1F00</item>
-        <item name="android:colorBackground">#FBF7EB</item>
-        <item name="colorSurface">#FBF7EB</item>
-        <item name="colorOnBackground">#1C1B16</item>
-        <item name="colorOnSurface">#1C1B16</item>
-        <item name="colorSurfaceVariant">#E7E2D0</item>
-        <item name="colorOnSurfaceVariant">#4A483B</item>
+        <item name="colorSecondaryContainer">#FFDCD2</item>
+        <item name="colorOnSecondaryContainer">#4A1103</item>
+        <item name="colorTertiary">#4F6B00</item>
+        <item name="colorOnTertiary">#FFFFFF</item>
+        <item name="colorTertiaryContainer">#D8F27A</item>
+        <item name="colorOnTertiaryContainer">#141F00</item>
+        <item name="colorError">#BA1A3D</item>
+        <item name="android:colorBackground">#F7F6FC</item>
+        <item name="colorSurface">#F7F6FC</item>
+        <item name="colorOnBackground">#1B1A26</item>
+        <item name="colorOnSurface">#1B1A26</item>
+        <item name="colorSurfaceVariant">#E5E3F1</item>
+        <item name="colorOnSurfaceVariant">#474559</item>
         <item name="colorSurfaceContainerLowest">#FFFFFF</item>
-        <item name="colorSurfaceContainerLow">#F6F1E2</item>
-        <item name="colorSurfaceContainer">#F0EBDB</item>
-        <item name="colorSurfaceContainerHigh">#EAE5D5</item>
-        <item name="colorSurfaceContainerHighest">#E4DFCF</item>
-        <item name="colorOutline">#7A7868</item>
+        <item name="colorSurfaceContainerLow">#F1F0F9</item>
+        <item name="colorSurfaceContainer">#EBEAF5</item>
+        <item name="colorSurfaceContainerHigh">#E5E3F0</item>
+        <item name="colorSurfaceContainerHighest">#DFDDEB</item>
+        <item name="colorOutline">#777489</item>
+        <item name="colorOutlineVariant">#C9C6DA</item>
+        <!-- ByteLab shapes -->
+        <item name="shapeAppearanceSmallComponent">@style/BL.Shape.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/BL.Shape.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/BL.Shape.Large</item>
     </style>
 
     <style name="SwitchStyle" parent="Widget.Material3.CompoundButton.MaterialSwitch" />
