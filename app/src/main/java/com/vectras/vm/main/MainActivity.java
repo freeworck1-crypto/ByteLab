@@ -130,7 +130,10 @@ public class MainActivity extends AppCompatActivity implements RomStoreFragment.
 
     @Override
     public void updateSearchStatus(boolean isReady) {
-        bindingContent.searchbar.setEnabled(isReady);
+        // setEnabled() walks the whole SearchBar view tree; only do it when the state really changes.
+        if (bindingContent.searchbar.isEnabled() != isReady) {
+            bindingContent.searchbar.setEnabled(isReady);
+        }
     }
 
     @Override

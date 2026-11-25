@@ -1,5 +1,6 @@
 package com.vectras.vm.main.romstore;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.anbui.elephant.retrofit2utils.Retrofit2Utils;
 import com.google.android.material.chip.Chip;
 import com.google.gson.Gson;
-import com.google.common.reflect.TypeToken;
+import com.google.gson.reflect.TypeToken;
 import com.vectras.vm.AppConfig;
 import com.vectras.vm.R;
 import com.vectras.vm.databinding.FragmentHomeRomStoreBinding;
@@ -31,13 +32,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RomStoreFragment extends Fragment {
 
     private FragmentHomeRomStoreBinding binding;
-    private String contentJSON = "[]";
+    // One background thread for all catalogue work, so the UI thread never parses or reads files.
+    private static final ExecutorService IO = Executors.newSingleThreadExecutor();
+    // The online catalogue is merged once per app run, not every time the tab is opened.
+    private static volatile boolean remoteMerged = false;
     private HomeRomStoreViewModel homeRomStoreViewModel;
     private RomStoreHomeAdpater mAdapter;
     private final List<DataRoms> data = new ArrayList<>();
@@ -95,20 +101,38 @@ public class RomStoreFragment extends Fragment {
         });
 
         homeRomStoreViewModel = new ViewModelProvider(requireActivity()).get(HomeRomStoreViewModel.class);
+
+        List<DataRoms> existing = homeRomStoreViewModel.getRomsList().getValue();
+        if (existing == null || existing.isEmpty()) startLoad(); // sets loading=true before observing
+
         homeRomStoreViewModel.getRomsList().observe(getViewLifecycleOwner(), roms -> {
+            if (binding == null) return;
             if (roms == null || roms.isEmpty()) {
-                loadFromServer();
-            } else {
-                data.clear();
-                data.addAll(roms);
-                binding.linearload.setVisibility(View.GONE);
-                binding.linearnothinghere.setVisibility(View.GONE);
-                updateAndroidVersionChips();
-                applyFilters();
+                boolean loading = homeRomStoreViewModel.loading;
+                binding.linearload.setVisibility(loading ? View.VISIBLE : View.GONE);
+                binding.linearnothinghere.setVisibility(loading ? View.GONE : View.VISIBLE);
+                if (!loading) notifySearch(true);
+                return;
             }
+            data.clear();
+            data.addAll(roms);
+            SharedData.dataRomStore.clear();
+            SharedData.dataRomStore.addAll(roms);
+            binding.linearload.setVisibility(View.GONE);
+            binding.linearnothinghere.setVisibility(View.GONE);
+            updateAndroidVersionChips();
+            applyFilters();
+            notifySearch(true);
         });
 
-        binding.buttontryagain.setOnClickListener(v -> loadFromServer());
+        binding.buttontryagain.setOnClickListener(v -> {
+            remoteMerged = false;
+            startLoad();
+        });
+    }
+
+    private void notifySearch(boolean ready) {
+        if (romStoreCallToHomeListener != null) romStoreCallToHomeListener.updateSearchStatus(ready);
     }
 
     private void updateAndroidVersionChips() {
@@ -203,60 +227,59 @@ public class RomStoreFragment extends Fragment {
         mAdapter.submitList(filtered);
     }
 
-    private void loadFromServer() {
-        if (romStoreCallToHomeListener != null) romStoreCallToHomeListener.updateSearchStatus(false);
+    // ------------------------------------------------------------------ loading
+
+    /** Main thread. Shows the spinner and builds the list on a background thread. */
+    private void startLoad() {
+        if (homeRomStoreViewModel.loading) return;
+        homeRomStoreViewModel.loading = true;
+        notifySearch(false);
         binding.linearload.setVisibility(View.VISIBLE);
         binding.linearnothinghere.setVisibility(View.GONE);
 
-        final String bundled = readBundledCatalog();
+        final Context app = requireContext().getApplicationContext();
+        final HomeRomStoreViewModel vm = homeRomStoreViewModel;
 
-        // Show the catalogue that ships inside the APK straight away.
-        finishLoad(new String[]{bundled, "[]"}, new boolean[]{true, true});
+        IO.execute(() -> {
+            final String bundled = readBundledCatalog(app);
+            List<DataRoms> list = parse(mergeJson(bundled, "[]"));
+            list.addAll(containerRows(app));
+            vm.postRomsList(list); // the catalogue inside the APK shows immediately
 
-        // Optional: ByteLab's own online catalogue is merged in the background, so the
-        // screen never waits for (or freezes on) the network.
-        Retrofit2Utils.get(AppConfig.myRomStoreJson, ((ok, body, status, error) -> {
-            if (!ok || body == null || body.trim().isEmpty()) return;
-            new Thread(() -> {
-                final String merged = mergeJson(bundled, body);
-                android.app.Activity activity = getActivity();
-                if (activity == null) return;
-                activity.runOnUiThread(() -> {
-                    if (!isAdded() || binding == null) return;
-                    contentJSON = merged;
-                    loadData();
+            if (remoteMerged) return;
+            Retrofit2Utils.get(AppConfig.myRomStoreJson, (ok, body, status, error) -> {
+                if (!ok || body == null || body.trim().isEmpty()) return;
+                IO.execute(() -> {
+                    List<DataRoms> merged = parse(mergeJson(bundled, body));
+                    if (merged.isEmpty()) return;
+                    merged.addAll(containerRows(app));
+                    remoteMerged = true;
+                    vm.postRomsList(merged);
                 });
-            }).start();
-        }));
+            });
+        });
     }
 
-    private String readBundledCatalog() {
+    private List<DataRoms> parse(String json) {
+        try {
+            Type listType = new TypeToken<List<DataRoms>>() {}.getType();
+            List<DataRoms> parsed = new Gson().fromJson(json, listType);
+            return parsed == null ? new ArrayList<>() : new ArrayList<>(parsed);
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    private String readBundledCatalog(Context context) {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        try (InputStream input = requireContext().getAssets().open("roms.json")) {
+        try (InputStream input = context.getAssets().open("roms.json")) {
             byte[] buffer = new byte[4096];
             int count;
             while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
             return output.toString("UTF-8");
         } catch (Exception ignored) {
             return "[]";
-        } finally {
-            try { output.close(); } catch (Exception ignored) { }
         }
-    }
-
-    private void finishLoad(String[] results, boolean[] done) {
-        if (!done[0] || !done[1] || !isAdded() || binding == null) return;
-        String merged = mergeJson(results[0], results[1]);
-        if (merged == null || merged.trim().isEmpty() || "[]".equals(merged.trim())) {
-            binding.linearload.setVisibility(View.GONE);
-            binding.linearnothinghere.setVisibility(View.VISIBLE);
-            if (romStoreCallToHomeListener != null) romStoreCallToHomeListener.updateSearchStatus(true);
-            return;
-        }
-        contentJSON = merged;
-        binding.linearload.setVisibility(View.GONE);
-        binding.linearnothinghere.setVisibility(View.GONE);
-        loadData();
     }
 
     private String mergeJson(String bundled, String original) {
@@ -267,8 +290,7 @@ public class RomStoreFragment extends Fragment {
             addCatalogEntries(out, seen, original);
             return out.toString();
         } catch (Exception e) {
-            return bundled != null && !bundled.trim().isEmpty() && !"[]".equals(bundled.trim())
-                    ? bundled : (original == null ? "[]" : original);
+            return bundled != null && !bundled.trim().isEmpty() ? bundled : "[]";
         }
     }
 
@@ -287,9 +309,9 @@ public class RomStoreFragment extends Fragment {
     }
 
     /** Lightweight containers are listed next to the full OS images (the images are untouched). */
-    private List<DataRoms> containerRows() {
+    private List<DataRoms> containerRows(Context context) {
         List<DataRoms> rows = new ArrayList<>();
-        for (com.vectras.vm.container.ContainerEntry c : com.vectras.vm.container.ContainerManager.loadCatalog(requireContext())) {
+        for (com.vectras.vm.container.ContainerEntry c : com.vectras.vm.container.ContainerManager.loadCatalog(context)) {
             DataRoms r = new DataRoms();
             r.id = c.id;
             r.vecid = c.id;
@@ -310,26 +332,6 @@ public class RomStoreFragment extends Fragment {
             rows.add(r);
         }
         return rows;
-    }
-
-    private void loadData() {
-        try {
-            Type listType = new TypeToken<List<DataRoms>>() {}.getType();
-            List<DataRoms> parsed = new Gson().fromJson(contentJSON, listType);
-            data.clear();
-            if (parsed != null) data.addAll(parsed);
-            data.addAll(containerRows());
-        } catch (Exception e) {
-            binding.linearload.setVisibility(View.GONE);
-            binding.linearnothinghere.setVisibility(View.VISIBLE);
-        }
-
-        homeRomStoreViewModel.setRomsList(new ArrayList<>(data));
-        SharedData.dataRomStore.clear();
-        SharedData.dataRomStore.addAll(data);
-        updateAndroidVersionChips();
-        applyFilters();
-        if (romStoreCallToHomeListener != null) romStoreCallToHomeListener.updateSearchStatus(true);
     }
 
     @Override
