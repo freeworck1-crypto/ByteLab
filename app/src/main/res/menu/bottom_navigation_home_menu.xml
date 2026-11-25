@@ -11,6 +11,7 @@
         android:title="@string/roms_store"/>
     <item
         android:id="@+id/item_softwarestore"
+        android:visible="false"
         android:enabled="true"
         android:icon="@drawable/ic_package_selector"
         android:title="@string/software_and_driver"/>

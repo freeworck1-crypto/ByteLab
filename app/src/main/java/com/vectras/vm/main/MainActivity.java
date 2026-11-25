@@ -861,22 +861,16 @@ public class MainActivity extends AppCompatActivity implements RomStoreFragment.
         }
 
         List<DataRoms> suggestionList = new ArrayList<>();
-
-        int addedCount = 0;
         Set<String> added = new HashSet<>();
 
-        if (list.size() > 3) {
-            while (addedCount < 3) {
-                int position = new Random().nextInt(list.size());
-
-                if (!added.contains(list.get(position).id.isEmpty() ? list.get(position).vecid : list.get(position).id)) {
-                    suggestionList.add(list.get(position));
-                    added.add(list.get(position).id.isEmpty() ? list.get(position).vecid : list.get(position).id);
-                    addedCount++;
-                }
-            }
-        } else {
-            suggestionList.addAll(list);
+        // Shuffle once and take the first 3 different entries (no endless random retry loop).
+        List<DataRoms> shuffled = new ArrayList<>(list);
+        java.util.Collections.shuffle(shuffled);
+        for (DataRoms item : shuffled) {
+            String key = (item.id == null || item.id.isEmpty()) ? item.vecid : item.id;
+            if (key == null) key = String.valueOf(System.identityHashCode(item));
+            if (added.add(key)) suggestionList.add(item);
+            if (suggestionList.size() >= 3) break;
         }
 
         return suggestionList;

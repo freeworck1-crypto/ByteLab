@@ -209,29 +209,25 @@ public class RomStoreFragment extends Fragment {
         binding.linearnothinghere.setVisibility(View.GONE);
 
         final String bundled = readBundledCatalog();
-        final String[] results = new String[]{bundled, "", ""};
-        final boolean[] done = new boolean[]{true, false, false};
 
-        // Display the APK-bundled catalogue immediately. Optional online catalogues
-        // are merged later, so a slow network cannot block first interaction.
+        // Show the catalogue that ships inside the APK straight away.
         finishLoad(new String[]{bundled, "[]"}, new boolean[]{true, true});
 
+        // Optional: ByteLab's own online catalogue is merged in the background, so the
+        // screen never waits for (or freezes on) the network.
         Retrofit2Utils.get(AppConfig.myRomStoreJson, ((ok, body, status, error) -> {
-            results[1] = (ok && body != null) ? body : "";
-            done[1] = true;
-            finishCatalogSources(results, done);
+            if (!ok || body == null || body.trim().isEmpty()) return;
+            new Thread(() -> {
+                final String merged = mergeJson(bundled, body);
+                android.app.Activity activity = getActivity();
+                if (activity == null) return;
+                activity.runOnUiThread(() -> {
+                    if (!isAdded() || binding == null) return;
+                    contentJSON = merged;
+                    loadData();
+                });
+            }).start();
         }));
-        Retrofit2Utils.get(AppConfig.romStoreJson, ((ok, body, status, error) -> {
-            results[2] = (ok && body != null) ? body : "";
-            done[2] = true;
-            finishCatalogSources(results, done);
-        }));
-    }
-
-    private void finishCatalogSources(String[] results, boolean[] done) {
-        if (!done[0] || !done[1] || !done[2] || !isAdded() || binding == null) return;
-        String online = mergeJson(results[1], results[2]);
-        finishLoad(new String[]{results[0], online}, new boolean[]{true, true});
     }
 
     private String readBundledCatalog() {

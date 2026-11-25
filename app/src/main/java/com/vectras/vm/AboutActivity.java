@@ -220,12 +220,12 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
     public void onClick(View v) {
         int id = v.getId();
             if (id == TG) {
-                String tg = "https://t.me/vectras_os";
+                String tg = AppConfig.vectrasRepo;
                 Intent f = new Intent(Intent.ACTION_VIEW);
                 f.setData(Uri.parse(tg));
                 startActivity(f);
             } else if (id == YT) {
-                String tw = "https://youtube.com/@xoureldeen";
+                String tw = AppConfig.vectrasRepo;
                 Intent w = new Intent(Intent.ACTION_VIEW);
                 w.setData(Uri.parse(tw));
                 startActivity(w);
@@ -235,17 +235,17 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
                 g.setData(Uri.parse(gt));
                 startActivity(g);
             } else if (id == IG) {
-                String ig = "https://vectras.vercel.app";
+                String ig = AppConfig.vectrasRepo;
                 Intent i = new Intent(Intent.ACTION_VIEW);
                 i.setData(Uri.parse(ig));
                 startActivity(i);
             } else if (id == DD) {
-                String dd = "https://discord.gg/t8TACrKSk7";
+                String dd = AppConfig.vectrasRepo;
                 Intent f = new Intent(Intent.ACTION_VIEW);
                 f.setData(Uri.parse(dd));
                 startActivity(f);
             } else if (id == FB) {
-                String fb = AppConfig.vectrasWebsite + "community.html";
+                String fb = AppConfig.vectrasRepo;
                 Intent f = new Intent(Intent.ACTION_VIEW);
                 f.setData(Uri.parse(fb));
                 startActivity(f);
