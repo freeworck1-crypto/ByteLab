@@ -20,33 +20,69 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
           packages: ''
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK packages (with retry)
         run: |
-          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          for i in 1 2 3; do
+            sdkmanager "platforms;android-37.0" "build-tools;36.0.0" "ndk;28.2.13676358" && break
+            echo "Install failed, retry $i"
+            rm -rf "$ANDROID_HOME/ndk/28.2.13676358"
+            sleep 10
+          done
+          test -d "$ANDROID_HOME/ndk/28.2.13676358"
 
-      - name: Create debug keystore
+      # The release key comes from GitHub Actions Secrets. If the secret is not
+      # set, the release build is skipped and only the debug APK is built.
+      - name: Restore ByteLab signing key (if available)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.BYTELAB_KEYSTORE_BASE64 }}
         run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "No signing key secret found - release build will be skipped."
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/bytelab-signing"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/bytelab-signing/bytelab-release.jks"
+          test -s "$RUNNER_TEMP/bytelab-signing/bytelab-release.jks"
+          echo "HAS_KEY=true" >> "$GITHUB_ENV"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build APK
+      - name: Build debug APK
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon assembleDebug
+          VERSION_CODE=$((157 + GITHUB_RUN_NUMBER))
+          ./gradlew --no-daemon assembleDebug -PVERSION_CODE="$VERSION_CODE"
 
-      - name: Upload APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: ByteLab-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Build signed release APKs
+        if: env.HAS_KEY == 'true'
+        env:
+          BYTELAB_KEYSTORE_FILE: ${{ runner.temp }}/bytelab-signing/bytelab-release.jks
+          BYTELAB_STORE_PASSWORD: ${{ secrets.BYTELAB_STORE_PASSWORD }}
+          BYTELAB_KEY_ALIAS: ${{ secrets.BYTELAB_KEY_ALIAS }}
+          BYTELAB_KEY_PASSWORD: ${{ secrets.BYTELAB_KEY_PASSWORD }}
+        run: |
+          VERSION_CODE=$((157 + GITHUB_RUN_NUMBER))
+          ./gradlew --no-daemon assembleRelease -PVERSION_CODE="$VERSION_CODE"
+
+      - name: Upload signed release APKs
+        if: env.HAS_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ByteLab-release-apks
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
