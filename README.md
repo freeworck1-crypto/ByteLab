@@ -1,5 +1,20 @@
+# ByteLab by NIAZNIX
+
+**ByteLab** is an open-source virtual-machine application maintained by **NIAZNIX**. The product goal is a lightweight manager with one-time OS preparation and simple Run/Resume controls.
+
+> This repository currently contains an adapted Vectras VM-based QEMU application. Existing upstream license and attribution obligations remain in force. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSE](LICENSE).
+
+## Current engineering status
+
+- Existing QEMU-based VM manager and display stack retained.
+- Android guest virtualization backend is not yet implemented in this update.
+- ROM catalogue/bootstrap data is still served by the inherited upstream endpoints pending migration to NIAZNIX-hosted catalogues.
+- See [NIAZNIX_BYTELAB_ENGINE_PLAN.md](NIAZNIX_BYTELAB_ENGINE_PLAN.md) for the staged runtime and performance plan.
+
+---
+
 <div align="center">
-  <img src="resources/vectrasvm.png" alt="Vectras VM logo" width="128" />
+  <img src="resources/bytelab-app-icon.png" alt="ByteLab app icon" width="128" />
 <p align="center">
   <a href="https://trendshift.io/repositories/12183" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12183" alt="xoureldeen%2FVectras-VM-Android | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </p>

@@ -1,15 +1,14 @@
-# Vectras VM — Privacy Policy
+# ByteLab by NIAZNIX — Privacy Policy
 
-Last updated: October 8, 2026
+Last updated: November 24, 2026
 
 ## 1. Scope and contact
 
-This policy describes the current maintained Android build of Vectras VM available through https://github.com/xoureldeen/Vectras-VM-Android. It covers the app's own behavior, not independent forks, software running inside a guest operating system, external websites, or services you choose to use.
+This policy describes the ByteLab Android application maintained by NIAZNIX. It covers the app's own behavior, not software running inside a guest operating system, external websites, or services you choose to use. No in-app NIAZNIX support email or policy website is configured in this source package yet.
 
-Project-maintainer contact: noureldeenelsayed1212@gmail.com
-Download-metadata repository: https://github.com/xoureldeen/vectras-vm-bucket
+ByteLab is derived from open-source components; required third-party notices are documented in THIRD_PARTY_NOTICES.md.
 
-This build does not require a Vectras account and does not implement a first-party cloud account, virtual-disk synchronization service, Firebase Analytics, Firebase Cloud Messaging, Firebase Crashlytics, advertising SDK, or likes/view-count service. This does not mean the app is entirely offline: the network features described below contact external providers.
+This build does not require a ByteLab account and does not implement a first-party cloud account, virtual-disk synchronization service, Firebase Analytics, Firebase Cloud Messaging, Firebase Crashlytics, advertising SDK, or likes/view-count service. This does not mean the app is entirely offline: the network features described below contact external providers.
 
 ## 2. Information processed on your device
 
@@ -29,10 +28,9 @@ The app does not automatically upload your virtual disks, documents, terminal hi
 
 Depending on the feature you use and your settings, the app can make requests for:
 
-- ROM and software catalogs, update metadata, and setup-file metadata hosted in the project download repository.
+- ROM and software catalogs, update metadata, and setup-file metadata. Important: this source package still points these catalogue/bootstrap requests to the inherited upstream VM download bucket until NIAZNIX deploys a replacement catalogue. That external provider may receive ordinary request metadata such as your IP address and requested resource.
 - QEMU archives, graphics packages, app-update downloads, store icons, and files or provider pages referenced by those catalogs.
-- Public GitHub contributor profiles and avatar images displayed in About.
-- The Terms of Service and Privacy Policy from the root of the source repository when you open their dialogs. A bundled copy is available if the online document cannot be loaded.
+- The Terms of Service and Privacy Policy are read from copies bundled in the application. The About screen does not load the former upstream contributor profiles.
 - Linux packages from repositories configured in the local Linux environment when package installation or updates run.
 
 Opening a catalog or About can trigger requests even if you do not download a ROM. Downloads and image requests contact the destination selected by metadata; that destination is not necessarily operated by this project's maintainer.
@@ -43,7 +41,7 @@ Third-party providers determine how their own request records are used and retai
 
 ## 4. Information you choose to share
 
-The About contact action opens an email draft through an email application you select. The draft includes the device brand in its subject and the device model in its body. The maintainer receives your email address, message, and any attachments only if you send them. Your email provider processes the message under its own policies.
+This build does not currently configure an in-app maintainer email address. If you choose to contact NIAZNIX through a separate channel, that channel and your email provider will process the information you send under their own policies.
 
 You can also copy logs, export or share VM packages and files, or publish information through services such as GitHub. Public issues and comments may be visible to anyone. Review and remove secrets, account details, personal file paths, and unrelated information before sharing. Support messages are used to understand and respond to the request you submit; do not assume that deleting local app data deletes an email or public post.
 
@@ -65,7 +63,7 @@ You can delete files through the application's available file-management feature
 
 Android backup is enabled in the current manifest. Eligible app data may be backed up or transferred by Android or a device-vendor service according to your device settings and the applicable platform rules. The project does not operate that backup service or control its retention. Review your device's backup and account settings; see https://developer.android.com/identity/data/autobackup for platform information.
 
-There is no in-app account-deletion workflow because this build has no Vectras account system. To ask about a support message you sent, contact the maintainer using the address above. Third-party request logs, public posts, and backup copies are managed by their respective providers, not by uninstalling this app.
+There is no in-app account-deletion workflow because this build has no ByteLab account system. To ask about a support message you sent, contact the maintainer using the address above. Third-party request logs, public posts, and backup copies are managed by their respective providers, not by uninstalling this app.
 
 ## 7. Security and your choices
 

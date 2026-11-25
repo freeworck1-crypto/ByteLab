@@ -1,3 +1,4 @@
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/bytelab_logo"
-    android:inset="24dp" />
+<?xml version="1.0" encoding="utf-8"?>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/bytelab_app_icon"
+    android:gravity="center" />

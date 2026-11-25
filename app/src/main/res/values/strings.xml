@@ -1240,4 +1240,39 @@ E.g. <b>META</b> for <i>META key</i>, \n
 
     <!-- ========================== TERMUX-X11 STRINGS ========================== -->
     <!-- <string name="plugin_info" translatable="false">lol</string> -->
+
+    <!-- NIAZNIX branding and permissions -->
+    <string name="made_by_niaznix">Designed &amp; developed by NIAZNIX</string>
+    <string name="a_niaznix_product">ByteLab is a NIAZNIX product</string>
+    <string name="based_on_credit">Built on open-source software: Vectras VM (GPL-2.0) by Noureldeen Elsayed, QEMU and others. See Open source licenses.</string>
+    <string name="app_permissions">App permissions</string>
+    <string name="app_permissions_intro">Grant only what you need. ByteLab never turns these on by itself.</string>
+    <string name="perm_status_granted">Allowed</string>
+    <string name="perm_status_not_granted">Not allowed</string>
+    <string name="perm_status_auto">Granted automatically</string>
+    <string name="perm_status_not_needed">Not needed on this Android version</string>
+    <string name="perm_button_allow">Allow</string>
+    <string name="perm_button_settings">Open settings</string>
+    <string name="perm_overlay_title">Display over other apps</string>
+    <string name="perm_overlay_desc">Floating controls on top of a running virtual phone.</string>
+    <string name="perm_install_title">Install unknown apps</string>
+    <string name="perm_install_desc">Install APK files into or from ByteLab.</string>
+    <string name="perm_battery_title">Unrestricted battery usage</string>
+    <string name="perm_battery_desc">Keeps a virtual machine running when the screen is off.</string>
+    <string name="perm_files_title">All files access</string>
+    <string name="perm_files_desc">Read and save OS images and disks outside the app folder.</string>
+    <string name="perm_camera_title">Camera</string>
+    <string name="perm_camera_desc">Lets the virtual phone use your camera.</string>
+    <string name="perm_mic_title">Microphone</string>
+    <string name="perm_mic_desc">Lets the virtual phone use your microphone.</string>
+    <string name="perm_location_title">Location</string>
+    <string name="perm_location_desc">Lets the virtual phone read your location.</string>
+    <string name="perm_nearby_title">Nearby devices / Bluetooth</string>
+    <string name="perm_nearby_desc">Bluetooth and nearby Wi-Fi devices for the virtual phone.</string>
+    <string name="perm_notifications_title">Notifications</string>
+    <string name="perm_notifications_desc">Download progress and VM status.</string>
+    <string name="perm_wifi_title">Wi-Fi and network</string>
+    <string name="perm_wifi_desc">Network access for downloads and the virtual phone.</string>
+    <string name="perm_adb_title">ADB / Wireless debugging</string>
+    <string name="perm_adb_desc">Turn on in Developer options. Needed for advanced tools.</string>
 </resources>

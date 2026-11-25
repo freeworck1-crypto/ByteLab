@@ -162,19 +162,10 @@ public class X11Activity extends AppCompatActivity {
 
     ActivityX11Binding binding;
 
-    private com.vectras.vm.utils.GestureGuard gestureGuard;
-
-    @Override
-    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
-        if (gestureGuard != null) gestureGuard.onTouch(ev);
-        return super.dispatchTouchEvent(ev);
-    }
-
     @Override
     @SuppressLint({"AppCompatMethod", "ObsoleteSdkInt", "ClickableViewAccessibility", "WrongConstant", "UnspecifiedRegisterReceiverFlag"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        gestureGuard = new com.vectras.vm.utils.GestureGuard(this);
 
         prefs = new Prefs(this);
         int modeValue = Integer.parseInt(prefs.touchMode.get()) - 1;
@@ -279,7 +270,6 @@ public class X11Activity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (gestureGuard != null) gestureGuard.dispose();
         unregisterReceiver(receiver);
         if (addIn != null) addIn.handleOnDestroy();
         super.onDestroy();
@@ -733,7 +723,7 @@ public class X11Activity extends AppCompatActivity {
     Notification buildNotification() {
         NotificationCompat.Builder builder =  new NotificationCompat.Builder(this, getNotificationChannel(mNotificationManager))
                 .setContentTitle("Termux:X11")
-                .setSmallIcon(R.drawable.vectras_vm_24px)
+                .setSmallIcon(R.drawable.bytelab_notification)
                 .setContentText(getResources().getText(R.string.lorie_notification_content_text))
                 .setOngoing(true)
                 .setPriority(Notification.PRIORITY_MAX)
@@ -777,10 +767,6 @@ public class X11Activity extends AppCompatActivity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus && gestureGuard != null) {
-            gestureGuard.setHideBars(prefs != null && prefs.fullscreen.get());
-            gestureGuard.lock();
-        }
         KeyInterceptor.recheck();
         prefs.recheckStoringSecondaryDisplayPreferences();
         Window window = getWindow();

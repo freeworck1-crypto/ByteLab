@@ -79,26 +79,38 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <LinearLayout
+                <ImageView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_marginTop="8dp"
+                    android:contentDescription="NIAZNIX"
+                    android:src="@drawable/niaznix_logo" />
+
+                <TextView
+                    android:id="@+id/textView2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:padding="4dp"
+                    android:text="@string/made_by_niaznix"
+                    android:textSize="16sp" />
+
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:orientation="horizontal">
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="8dp"
+                    android:text="@string/based_on_credit"
+                    android:textSize="12sp" />
 
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:padding="8dp"
-                        app:srcCompat="@drawable/free_palestine" />
-
-                    <TextView
-                        android:id="@+id/textView2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="4dp"
-                        android:text="@string/free_palistine"
-                        android:textSize="16sp" />
-                </LinearLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_permissions"
+                    style="?attr/buttonBarNegativeButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_permissions" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_open_source_licenses"
@@ -131,7 +143,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="8dp"
             android:padding="4dp"
-            android:visibility="visible"
+            android:visibility="gone"
             android:id="@+id/card_social"
             app:cardBackgroundColor="?attr/colorCard" >
 
@@ -259,7 +271,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="8dp"
             android:padding="4dp"
-            android:visibility="visible"
+            android:visibility="gone"
             android:id="@+id/developers"
             app:cardBackgroundColor="?attr/colorCard" >
 

@@ -1,5 +1,10 @@
-Safe to delete from the project (they are empty or leak secrets):
-  Run                      (empty file)
-  Get                      (empty file)
-  bytelab-release.jks      (signing key – never keep it in the repo; rotate it if the repo is public)
-  bytelab-base64.txt       (base64 copy of the signing key – same warning)
+Delete these files from your project (they are stale, broken or secret):
+
+build.gradle.kts                  (old duplicate - the Groovy build.gradle is the one that is used)
+settings.gradle.kts               (old duplicate - only lists the app module)
+app/build.gradle.kts              (old duplicate)
+app/src/main/res/font/googlesansflex.ttf   (7 MB, corrupted file - the theme now uses the small valid font)
+Run
+Get                               (empty files)
+bytelab-release.jks               (signing key - remove from the project, and create a NEW key if the repo or ZIP was ever shared)
+bytelab-base64.txt                (base64 copy of the signing key - same warning)

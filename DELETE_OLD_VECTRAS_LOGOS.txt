@@ -1,0 +1,8 @@
+Delete these obsolete inherited Vectras branding image files after extracting this patch:
+- resources/vectras-icon.jpg
+- resources/vectras-logo-dark-mode.png
+- resources/vectras-logo-light-mode.png
+- resources/vectrasvm.png
+
+Do not delete LICENSE, THIRD_PARTY_NOTICES.md, or required upstream copyright/license notices.
+The README now uses resources/bytelab-app-icon.png.

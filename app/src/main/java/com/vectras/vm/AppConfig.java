@@ -30,7 +30,7 @@ public class AppConfig {
     public static String vectrasPrivacy = vectrasSourceRaw + "PRIVACYANDPOLICY.md";
     public static String vectrasTerms = vectrasSourceRaw + "TERMSOFSERVICE.md";
     public static String vectrasInfo = vectrasRaw + "info.md";
-    public static String vectrasRepo = "https://github.com/xoureldeen/Vectras-VM-Android";
+    public static String vectrasRepo = "https://github.com/freeworck1-crypto/ByteLab";
     public static String updateJson = vectrasRaw + "UpdateConfig.json";
     public static String romStoreJson = vectrasRaw + "vroms-store.json";
     // Your own store list: edit store/roms.json in your ByteLab GitHub repo to add systems.
@@ -60,9 +60,9 @@ public class AppConfig {
         return activity.getExternalFilesDir("data") + "/Vectras";
         //return FileUtils.getExternalFilesDirectory(activity).getPath();
     }
-    public static String internalDataDirPath = "/data/data/com.vectras.vm/files/";
+    public static String internalDataDirPath = "/data/data/com.niaznix.bytelab/files/";
     public static String basefiledir = "";
-    public static String maindirpath = "/sdcard/Documents/VectrasVM/";
+    public static String maindirpath = "/sdcard/Documents/ByteLab/";
     public static String recyclebin = maindirpath + "RecycleBin/";
     //public static String basefiledir = datadirpath(SplashActivity.activity) + "/.qemu/";
     //public static String maindirpath = FileUtils.getExternalFilesDirectory(SplashActivity.activity).getPath() + "/";
@@ -110,9 +110,9 @@ public class AppConfig {
 
     public static String temporaryLastedTerminalOutput = "";
 
-    public static String telegramLink = "https://t.me/vectras_os";
+    public static String telegramLink = "https://github.com/freeworck1-crypto/ByteLab";
 
-    public static String patreonLink = "https://www.patreon.com/VectrasTeam";
+    public static String patreonLink = "https://github.com/freeworck1-crypto/ByteLab";
 
     public static String virtIOWinUrl = "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.285-1/virtio-win.iso";
     public static String virtIOWinUrlMd5 = "9e650d0e7c6e017a91ca299c8f7ed766";

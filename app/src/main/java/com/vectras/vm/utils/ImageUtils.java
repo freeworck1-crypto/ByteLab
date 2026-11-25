@@ -100,7 +100,7 @@ public class ImageUtils {
         ContentValues values = new ContentValues();
         values.put(MediaStore.Images.Media.DISPLAY_NAME, fileName + ".png");
         values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
-        values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/VectrasVM");
+        values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/ByteLab");
         values.put(MediaStore.Images.Media.IS_PENDING, 1);
 
         ContentResolver resolver = context.getContentResolver();

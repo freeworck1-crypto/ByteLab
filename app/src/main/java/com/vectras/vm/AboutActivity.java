@@ -82,23 +82,10 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
         btn_clog.setOnClickListener(this);
 
         FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(view -> {
-            Intent i = new Intent(Intent.ACTION_SEND);
-            i.setType("message/rfc822");
-            i.putExtra(Intent.EXTRA_EMAIL  , new String[]{"noureldeenelsayed1212@gmail.com"});
-            i.putExtra(Intent.EXTRA_SUBJECT, "Vectras User: " + Build.BRAND);
-            i.putExtra(Intent.EXTRA_TEXT   , "Device Model: \n" + Build.MODEL + "\n");
-            try {
-                startActivity(Intent.createChooser(i, "Send mail..."));
-            } catch (android.content.ActivityNotFoundException ex) {
-                Snackbar.make(view, "There are no email clients installed.", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-
-        });
+        fab.setVisibility(View.GONE);
 
         RecyclerView recyclerView = findViewById(R.id.github_users_recycler_view);
-        String[] usernames = {"vectras-team", "xoureldeen"};
+        String[] usernames = {};
 
         GithubUserAdapter adapter = new GithubUserAdapter(this, usernames);
         recyclerView.setAdapter(adapter);
@@ -113,6 +100,7 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
             });
         });
 
+        findViewById(R.id.btn_permissions).setOnClickListener(v -> startActivity(new Intent(this, com.niaznix.bytelab.PermissionsActivity.class)));
         findViewById(R.id.btn_open_source_licenses).setOnClickListener(v -> startActivity(new Intent(this, OssLicensesMenuActivity.class)));
         findViewById(R.id.btn_terms).setOnClickListener(v -> showLegalDocument(
                 R.string.terms_of_service, AppConfig.vectrasTerms, "TERMSOFSERVICE.md"));

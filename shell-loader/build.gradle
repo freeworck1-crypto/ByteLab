@@ -1,66 +1,19 @@
+//file:noinspection UnnecessaryQualifiedReference, GrDeprecatedAPIUsage
 apply plugin: 'com.android.application'
 
-def appDebugSigningConfig = project(':app').android.signingConfigs.debug
-
-def keystoreFile = appDebugSigningConfig.storeFile
-
-if (keystoreFile == null) {
-    keystoreFile = new File(
-        System.getProperty("user.home"),
-        ".android/debug.keystore"
-    )
-}
-
-def storePassword = appDebugSigningConfig.storePassword ?: "android"
-def keyAlias = appDebugSigningConfig.keyAlias ?: "AndroidDebugKey"
-def keyPassword = appDebugSigningConfig.keyPassword ?: storePassword
-
-keystoreFile.parentFile.mkdirs()
-
-if (!keystoreFile.exists()) {
-    def keytool = new File(
-        System.getProperty("java.home"),
-        "bin/keytool"
-    )
-
-    def process = new ProcessBuilder([
-        keytool.absolutePath,
-        "-genkeypair",
-        "-v",
-        "-keystore", keystoreFile.absolutePath,
-        "-storetype", "PKCS12",
-        "-storepass", storePassword,
-        "-alias", keyAlias,
-        "-keypass", keyPassword,
-        "-keyalg", "RSA",
-        "-keysize", "2048",
-        "-validity", "10000",
-        "-dname", "CN=Android Debug,O=Android,C=US"
-    ]).redirectErrorStream(true).start()
-
-    def output = process.inputStream.getText("UTF-8")
-    def exitCode = process.waitFor()
-
-    if (exitCode != 0) {
-        throw new GradleException("Debug keystore generation failed: " + output)
-    }
-}
-
-def keyStore = java.security.KeyStore.getInstance("PKCS12")
-keyStore.load(
-    new FileInputStream(keystoreFile),
-    storePassword.toCharArray()
-)
+def appSigningConfig = project(':app').android.signingConfigs.debug
 
 android {
-    compileSdk 34
-    buildToolsVersion '36.1.0'
 
     buildTypes {
         debug {
-            signingConfig appDebugSigningConfig
+            if (appSigningConfig != null) {
+                signingConfig appSigningConfig
+            }
         }
     }
+    buildToolsVersion '36.1.0'
+    compileSdk 34
 }
 
 android.namespace 'com.vectras.vm'
@@ -68,9 +21,7 @@ android.defaultConfig.minSdkVersion 21
 android.buildFeatures.buildConfig true
 android.compileOptions.sourceCompatibility SDK_VERSION
 android.compileOptions.targetCompatibility SDK_VERSION
-
 dependencies.compileOnly project(':shell-loader:stub')
-
 androidComponents {
     onVariants(selector().all()) { variant ->
         variant.outputs.forEach { output ->
@@ -79,20 +30,17 @@ androidComponents {
     }
 }
 
+def signingConfig = project(':app').android.signingConfigs.debug
+def keyStore = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType())
+keyStore.load(new FileInputStream(signingConfig.storeFile), signingConfig.keyPassword.toCharArray())
+
 android.defaultConfig.buildConfigField "String", "logTag", "\"Termux:X11 loader\""
-
-android.defaultConfig.buildConfigField "int", "SIGNATURE",
-    String.valueOf(Arrays.hashCode(keyStore.getCertificate(keyAlias).getEncoded()))
-
+android.defaultConfig.buildConfigField "int", "SIGNATURE", String.valueOf(Arrays.hashCode(keyStore.getCertificate(signingConfig.keyAlias).getEncoded()))
 android.defaultConfig.buildConfigField "String", "CLASS_ID", "\"com.vectras.vm.x11.CmdEntryPoint\""
-
 android.defaultConfig.buildConfigField "String", "packageNotInstalledErrorText",
-    """\"Termux:X11 application is not found.\" +
-    \"You should choose latest successful workflow here: https://github.com/termux/termux-x11/actions/workflows/debug_build.yml\" +
-    \"After this you should download \\"termux-x11-ARCH-debug\\" or \\"termux-x11-universal-debug\\" artifact and install apk contained in this zip file.\""""
-
+        """\"Termux:X11 application is not found.\" +
+        \"You should choose latest successful workflow here: https://github.com/termux/termux-x11/actions/workflows/debug_build.yml\" +
+        \"After this you should download \\"termux-x11-ARCH-debug\\" or \\"termux-x11-universal-debug\\" artifact and install apk contained in this zip file.\""""
 android.defaultConfig.buildConfigField "String", "packageSignatureMismatchErrorText",
-    "\"Signature verification of target application " + android.namespace + " failed.\\nPlease, reinstall both termux-x11 package and Termux:X11 application from the same source\""
-
-android.defaultConfig.buildConfigField "String", "COMMIT",
-    "\"" + ("git rev-parse HEAD\n".execute().getText().trim() ?: (System.getenv('CURRENT_COMMIT') ?: "NO_COMMIT")) + "\""
+        "\"Signature verification of target application " + android.namespace + " failed.\\nPlease, reinstall both termux-x11 package and Termux:X11 application from the same source\""
+android.defaultConfig.buildConfigField "String", "COMMIT", "\"" + ("git rev-parse HEAD\n".execute().getText().trim() ?: (System.getenv('CURRENT_COMMIT') ?: "NO_COMMIT")) + "\""

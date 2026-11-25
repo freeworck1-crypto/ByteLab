@@ -522,7 +522,7 @@ public class MainActivity extends AppCompatActivity implements RomStoreFragment.
                     FileUtils.openFolder(this, AppConfig.maindirpath);
                 }
             } else if (id == R.id.navigation_item_donate) {
-                String tw = "https://www.patreon.com/VectrasTeam";
+                String tw = "https://github.com/freeworck1-crypto/ByteLab";
                 Intent w = new Intent(ACTION_VIEW);
                 w.setData(Uri.parse(tw));
                 startActivity(w);

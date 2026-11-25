@@ -1,27 +1,25 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ByteLab release shrinking rules.
+# The app's own code is kept whole (it uses reflection, JNI and Gson models);
+# only unused LIBRARY code and unused resources are removed.
 -dontobfuscate
+-ignorewarnings
 -dontwarn org.slf4j.impl.StaticLoggerBinder
--keep class com.vectras.qemu.MainSettingsManager$UserInterfacePreferencesFragment { *; }
--keep class com.vectras.qemu.MainSettingsManager$QemuPreferencesFragment { *; }
--keep class com.vectras.qemu.MainSettingsManager$VncPreferencesFragment { *; }
+-dontwarn javax.annotation.**
+-dontwarn org.checkerframework.**
+-dontwarn com.google.errorprone.annotations.**
+
+-keep class com.vectras.** { *; }
+-keep class com.niaznix.** { *; }
+-keep class com.termux.** { *; }
+-keep class com.anbui.** { *; }
+-keep class com.antlersoft.** { *; }
+-keep class android.androidVNC.** { *; }
+-keepclasseswithmembernames class * { native <methods>; }
 -keep class android.media.LoudnessCodecController { *; }
+
+# Gson / Retrofit models and annotations
+-keepattributes Signature,*Annotation*,InnerClasses,EnclosingMethod
+-keep class * extends com.google.gson.TypeAdapter
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer

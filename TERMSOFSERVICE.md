@@ -1,14 +1,10 @@
-# Vectras VM — Terms of Service
+# ByteLab by NIAZNIX — Terms of Service
 
-Last updated: October 8, 2026
+Last updated: November 24, 2026
 
 ## 1. Scope and project contact
 
-These terms describe the conditions for using this maintained build of Vectras VM and its project-provided download and information features. Vectras VM is an open-source Android application for configuring and running virtual machines, importing and exporting virtual disks and ROM packages, and using a local Linux environment and terminal.
-
-Project source: https://github.com/xoureldeen/Vectras-VM-Android
-Project download metadata: https://github.com/xoureldeen/vectras-vm-bucket
-Contact: noureldeenelsayed1212@gmail.com
+These terms describe the conditions for using ByteLab, an open-source Android application maintained by NIAZNIX for configuring and running virtual machines, importing and exporting virtual disks and OS packages, and using its included Linux environment and terminal. The current source package still uses inherited upstream catalogue/bootstrap metadata endpoints while NIAZNIX prepares its own catalogue service. No in-app support email or project website is configured yet.
 
 Please read these terms and the Privacy Policy before using the application. These terms do not replace or restrict rights granted by the applicable open-source licenses, and viewing this document is not a separate acceptance or account-registration process.
 
@@ -34,7 +30,7 @@ The app does not provide a managed cloud backup or file-recovery service. Androi
 
 ## 5. Online features and external services
 
-The app may retrieve store catalogs, update information, contributor profiles, legal documents, QEMU archives, graphics packages, and other files from GitHub or the providers selected by published metadata. Linux package installation may contact configured package mirrors. Core setup also uses bundled bootstrap and Alpine assets, and a local QEMU archive can be selected instead of an online download.
+The app may retrieve store catalogs and setup metadata from the inherited upstream metadata host, and QEMU archives, graphics packages, and other files from GitHub or the providers selected by published metadata. The bundled legal documents are displayed locally; contributor-profile loading has been disabled in this ByteLab build. Linux package installation may contact configured package mirrors. Core setup also uses bundled bootstrap and Alpine assets, and a local QEMU archive can be selected instead of an online download.
 
 External providers control their services, files, availability, retention practices, and terms. Downloads may change or become unavailable. Review the destination and its policies before downloading files, opening external links, or providing information. A checksum, where supplied and checked, helps detect a file mismatch; it does not establish that software is safe or authorized for distribution.
 

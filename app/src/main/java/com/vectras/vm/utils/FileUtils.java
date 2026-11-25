@@ -61,7 +61,7 @@ public class FileUtils {
 
     @NonNull
     public static File getExternalFilesDirectory(Context context) {
-        return new File(Environment.getExternalStorageDirectory(), "Documents/VectrasVM");
+        return new File(Environment.getExternalStorageDirectory(), "Documents/ByteLab");
     }
 
     public static void chmod(File file, int mode) {

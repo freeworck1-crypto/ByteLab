@@ -16,7 +16,7 @@
         <item name="checkboxStyle">@style/MyCheckBoxStyle</item>
 <!--        <item name="android:windowAnimationStyle">@style/ActivityAnimation</item>-->
         <item name="actionOverflowButtonStyle">@style/AppTheme.Toolbar.OverflowButton</item>
-        <item name="fontFamily">@font/googlesansflex</item>
+        <item name="fontFamily">@font/googlesansvodevariablefontwght</item>
         <item name="chipStyle">@style/AppTheme.WidgetGroupChip</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="windowActionBarOverlay">true</item>

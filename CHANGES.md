@@ -1,3 +1,44 @@
+# ByteLab - update 3: build cleanup, NIAZNIX branding, permissions
+
+NOT built or tested by me. If the release APK crashes at start-up, open app/build.gradle and set
+minifyEnabled and shrinkResources back to false (release block) to check whether R8 is the cause.
+
+## Build and size
+- Release builds now use R8 + resource shrinking (app code is kept whole, only unused library code and resources go).
+- One APK per CPU type, named bytelab-<abi>-<code>.apk (no universal APK). Install the arm64-v8a one on your phone.
+- Fixed .gitignore (it had merge-conflict markers). Delete the stale .kts Gradle files (see DELETE-THESE.txt).
+- The 7 MB googlesansflex.ttf was a corrupted file. The theme now uses the small valid variable font.
+
+## Branding
+- New NIAZNIX logo (transparent), new ByteLab launcher icon (adaptive + themed + legacy), About screen and splash credit.
+- "FREE PALISTINE" banner removed from About. Old Vectras social/developer cards hidden, contact button hidden.
+- Fixed hard-coded data path (/data/data/com.vectras.vm -> com.niaznix.bytelab). Storage folder renamed
+  Documents/VectrasVM -> Documents/ByteLab (existing VMs in the old folder will not show; move them if needed).
+- Patreon / Telegram / repo links now point to https://github.com/freeworck1-crypto/ByteLab (change them in
+  AppConfig.java if that is not your repo).
+- Credit to Vectras VM (GPL-2.0), QEMU and other projects is kept in About and Open source licenses. Do not remove it: the license requires it.
+
+## Permissions
+- New screen: About > App permissions. Nothing is asked automatically; each permission is requested only when tapped.
+- Added: camera, location, Bluetooth, nearby Wi-Fi devices, Wi-Fi state, network state.
+- Screen also covers: display over other apps, install unknown apps, unrestricted battery, all files access,
+  microphone, notifications, and a shortcut to Developer options for ADB / Wireless debugging.
+- Accessibility service: NOT added (see reply).
+
+## Still depends on the original Vectras server
+Setup files and the OS store list are still downloaded from github.com/xoureldeen/vectras-vm-bucket
+(AppConfig.vectrasWebsiteRaw). If that repo changes or disappears, setup breaks. Next step: host your own copy.
+
+## Files in this update (same paths as your project)
+EDIT  .gitignore, app/build.gradle, app/proguard-rules.pro, AndroidManifest.xml, res/values/theme.xml,
+      res/values/strings.xml, res/layout/content_about.xml, res/layout/activity_splash.xml,
+      java/com/vectras/vm/{AppConfig,AboutActivity}.java, java/com/vectras/vm/utils/{FileUtils,ImageUtils}.java,
+      java/com/vectras/vm/main/MainActivity.java
+NEW   java/com/niaznix/bytelab/PermissionsActivity.java, res/drawable-nodpi/niaznix_logo.png
+REPLACED  res/mipmap-*/ic_launcher*.png (all densities)
+
+---
+
 # ByteLab – update 2: lightweight containers, auto-setup, gesture capture
 
 ## 1. Lightweight containers (new "Containers (lightweight)" chip in the store)

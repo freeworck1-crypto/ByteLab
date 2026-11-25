@@ -27,9 +27,9 @@ import com.vectras.vterm.Terminal2;
 import java.util.Objects;
 
 public class MainService extends Service {
-    public static String CHANNEL_ID = "Vectras VM Service";
+    public static String CHANNEL_ID = "ByteLab VM Service";
     private final int NOTIFICATION_ID = 1;
-    public static String vmName = "Vectras VM";
+    public static String vmName = "ByteLab";
     public static String env = null;
     private static String TAG = "MainService";
     public static MainService service;
@@ -52,7 +52,7 @@ public class MainService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText("The virtual machines are running...")
-                .setSmallIcon(R.drawable.vectras_vm_24px)
+                .setSmallIcon(R.drawable.bytelab_notification)
                 .addAction(R.drawable.close_24px, getString(R.string.stop), pStopSelf)
                 .build();
 
