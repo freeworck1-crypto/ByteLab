@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace 'com.vectras.vm'
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId "com.niaznix.bytelab"
