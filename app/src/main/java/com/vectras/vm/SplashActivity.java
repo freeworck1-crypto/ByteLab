@@ -138,7 +138,7 @@ public class SplashActivity extends AppCompatActivity {
                 intent.setClass(this, SetupWizard2Activity.class);
                 startActivity(intent);
             } else {
-                startActivity(new Intent(this, MainActivity.class));
+                startActivity(new Intent(this, com.vectras.vm.phone.PhoneHomeActivity.class));
             }
         } else {
             startActivity(new Intent(this, SetupWizard2Activity.class));

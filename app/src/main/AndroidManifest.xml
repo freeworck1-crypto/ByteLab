@@ -188,6 +188,10 @@
             android:exported="false"
             android:label="@string/mini_tools" />
         <activity
+            android:name=".phone.PhoneHomeActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:exported="false" />
+        <activity
             android:name=".store.RomInfo"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:exported="false" />
@@ -222,10 +226,6 @@
             android:name="com.niaznix.bytelab.PermissionsActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:exported="false" />
-        <activity
-            android:name=".credits.CreditsActivity"
-            android:exported="false"
-            android:label="@string/credits_title" />
         <activity
             android:name=".AboutActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"

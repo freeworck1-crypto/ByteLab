@@ -186,7 +186,7 @@ public class SetupWizard2Activity extends AppCompatActivity {
                 uiControllerFinalSteps(currentStep + 1);
                 IntentUtils.openUrl(this, AppConfig.patreonLink);
             } else {
-                startActivity(new Intent(this, MainActivity.class));
+                startActivity(new Intent(this, com.vectras.vm.phone.PhoneHomeActivity.class));
                 finish();
             }
         });
@@ -194,7 +194,7 @@ public class SetupWizard2Activity extends AppCompatActivity {
 
         //System update
         binding.btnSkipSystemUpdate.setOnClickListener(v -> {
-            startActivity(new Intent(this, MainActivity.class));
+            startActivity(new Intent(this, com.vectras.vm.phone.PhoneHomeActivity.class));
             finish();
         });
 

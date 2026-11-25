@@ -162,10 +162,19 @@ public class X11Activity extends AppCompatActivity {
 
     ActivityX11Binding binding;
 
+    private com.vectras.vm.utils.GestureGuard gestureGuard;
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent ev) {
+        if (gestureGuard != null) gestureGuard.onTouch(ev);
+        return super.dispatchTouchEvent(ev);
+    }
+
     @Override
     @SuppressLint({"AppCompatMethod", "ObsoleteSdkInt", "ClickableViewAccessibility", "WrongConstant", "UnspecifiedRegisterReceiverFlag"})
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        gestureGuard = new com.vectras.vm.utils.GestureGuard(this);
 
         prefs = new Prefs(this);
         int modeValue = Integer.parseInt(prefs.touchMode.get()) - 1;
@@ -183,6 +192,7 @@ public class X11Activity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         frm = findViewById(R.id.frame);
+        com.vectras.vm.phone.PhoneFrame.apply(this);
         findViewById(R.id.preferences_button).setOnClickListener((l) -> startActivity(new Intent(this, LoriePreferences.class) {{ setAction(Intent.ACTION_MAIN); }}));
         findViewById(R.id.help_button).setOnClickListener((l) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-x11/blob/master/README.md#running-graphical-applications"))));
         //findViewById(R.id.exit_button).setOnClickListener((l) -> finish());
@@ -270,6 +280,7 @@ public class X11Activity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (gestureGuard != null) gestureGuard.dispose();
         unregisterReceiver(receiver);
         if (addIn != null) addIn.handleOnDestroy();
         super.onDestroy();
@@ -723,7 +734,7 @@ public class X11Activity extends AppCompatActivity {
     Notification buildNotification() {
         NotificationCompat.Builder builder =  new NotificationCompat.Builder(this, getNotificationChannel(mNotificationManager))
                 .setContentTitle("Termux:X11")
-                .setSmallIcon(R.drawable.bytelab_notification)
+                .setSmallIcon(R.drawable.vectras_vm_24px)
                 .setContentText(getResources().getText(R.string.lorie_notification_content_text))
                 .setOngoing(true)
                 .setPriority(Notification.PRIORITY_MAX)
@@ -767,6 +778,10 @@ public class X11Activity extends AppCompatActivity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && gestureGuard != null) {
+            gestureGuard.setHideBars(prefs != null && prefs.fullscreen.get());
+            gestureGuard.lock();
+        }
         KeyInterceptor.recheck();
         prefs.recheckStoringSecondaryDisplayPreferences();
         Window window = getWindow();
