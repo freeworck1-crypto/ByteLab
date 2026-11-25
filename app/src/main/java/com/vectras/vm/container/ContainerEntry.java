@@ -16,6 +16,9 @@ public class ContainerEntry {
     @SerializedName("file_regex") public String fileRegex = "";
     /** Download URL. {arch} and {file} are replaced. */
     @SerializedName("url_template") public String urlTemplate = "";
+    /** Optional preconfigured rootfs snapshot URL; requires a pinned SHA-256. */
+    @SerializedName("snapshot_url") public String snapshotUrl = "";
+    @SerializedName("snapshot_sha256") public String snapshotSha256 = "";
     @SerializedName("arch_arm64") public String archArm64 = "aarch64";
     @SerializedName("arch_x86_64") public String archX8664 = "x86_64";
     @SerializedName("root_supported") public boolean rootSupported = true;

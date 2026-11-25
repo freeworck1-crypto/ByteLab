@@ -42,12 +42,12 @@ jobs:
       - name: Install Android SDK packages (with retry)
         run: |
           for i in 1 2 3; do
-            sdkmanager "platforms;android-37.0" "build-tools;36.0.0" "ndk;28.2.13676358" && break
+            sdkmanager "platforms;android-37" "build-tools;36.0.0" "ndk;27.3.13750724" && break
             echo "Install failed, retry $i"
-            rm -rf "$ANDROID_HOME/ndk/28.2.13676358"
+            rm -rf "$ANDROID_HOME/ndk/27.3.13750724"
             sleep 10
           done
-          test -d "$ANDROID_HOME/ndk/28.2.13676358"
+          test -d "$ANDROID_HOME/ndk/27.3.13750724"
 
       # The release key comes from GitHub Actions Secrets. If the secret is not
       # set, the release build is skipped and only the debug APK is built.

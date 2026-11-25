@@ -1,0 +1,16 @@
+IMPORTANT: ByteLab currently contains BOTH Groovy and Kotlin-DSL build files.
+The complete, multi-module project configuration is the Groovy configuration.
+Before syncing/building, delete these three conflicting Kotlin-DSL files from the project root:
+
+  build.gradle.kts
+  settings.gradle.kts
+  app/build.gradle.kts
+
+KEEP these files:
+  build.gradle
+  settings.gradle
+  app/build.gradle
+
+Do not delete the Gradle wrapper, gradle/libs.versions.toml, or any module build.gradle files.
+The Groovy settings.gradle already includes :app, :terminal-emulator, :terminal-view,
+:shell-loader:stub and :shell-loader.

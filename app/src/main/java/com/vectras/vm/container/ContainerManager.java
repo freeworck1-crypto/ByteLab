@@ -9,6 +9,7 @@ import android.system.Os;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.termux.app.TermuxService;
+import com.vectras.vm.engine.EngineRouter;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -112,12 +113,27 @@ public class ContainerManager {
                 return;
             }
 
+            File dir = new File(root(context), e.id);
+            File fs = rootfs(context, e.id);
+
+            // A publisher may provide a preconfigured, checksum-pinned rootfs snapshot.
+            // This skips per-user package installation/configuration and avoids QEMU.
+            if (e.snapshotUrl != null && !e.snapshotUrl.trim().isEmpty()) {
+                p.onStatus("Downloading preconfigured environment…");
+                ContainerSnapshotManager.downloadAndRestore(context, e.id, fs,
+                        e.snapshotUrl, e.snapshotSha256, p);
+                p.onStatus("Finalizing environment…");
+                configure(context, e, fs);
+                writeRunScript(context, e);
+                new File(dir, ".installed").createNewFile();
+                p.onDone(true, e.name + " restored from its verified preconfigured snapshot.");
+                return;
+            }
+
             p.onStatus("Finding the latest version…");
             String url = resolveUrl(e, arch);
 
-            File dir = new File(root(context), e.id);
             File archive = new File(dir, "rootfs.tar.gz");
-            File fs = rootfs(context, e.id);
             deleteRecursive(fs);
             if (!fs.mkdirs() && !fs.isDirectory()) { p.onDone(false, "Could not create the container folder."); return; }
 
@@ -317,6 +333,9 @@ public class ContainerManager {
 
     /** Opens the container in a terminal session. */
     public static void open(Context context, ContainerEntry e) throws Exception {
+        if (!isInstalled(context, e.id)) throw new Exception("Container is not installed.");
+        EngineRouter.Decision route = EngineRouter.forLinuxContainer(context, e);
+        if (route.backend != EngineRouter.Backend.PROOT_LINUX) throw new Exception(route.message);
         writeRunScript(context, e);
         Intent i = new Intent(TermuxService.ACTION_EXECUTE, Uri.fromFile(runScript(context, e.id)));
         i.setClass(context, TermuxService.class);
