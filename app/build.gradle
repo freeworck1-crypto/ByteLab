@@ -65,7 +65,7 @@ android {
             enable true
             reset()
             include 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
-            universalApk false
+            universalApk true
         }
     }
 
@@ -104,6 +104,9 @@ androidComponents {
             }
 
             if (variant.buildType == 'release') {
+                // Release: ship only the per-CPU APKs, not the big universal one.
+                // (Debug still needs the universal output, so universalApk stays true.)
+                output.enabled.set(abiFilter != null)
                 def abiName = abiFilter?.identifier ?: 'universal'
                 output.outputFileName.set(output.versionCode.map { code ->
                     "bytelab-${abiName}-${code}.apk".toString()
