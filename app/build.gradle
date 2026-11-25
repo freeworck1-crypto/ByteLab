@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace 'com.vectras.vm'
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId "com.niaznix.bytelab"
@@ -79,7 +79,7 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    buildToolsVersion '36.0.0'
+    buildToolsVersion '37.0.0'
     ndkVersion '27.3.13750724'
 
     externalNativeBuild {
