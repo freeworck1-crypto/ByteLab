@@ -223,6 +223,9 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".credits.CreditsActivity"
+            android:exported="false" />
+        <activity
             android:name="com.niaznix.bytelab.PermissionsActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:exported="false" />

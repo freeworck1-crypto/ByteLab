@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="credits_title">Credits</string>
+    <string name="credits_built_by">Built by NIAZNIX</string>
+    <string name="credits_intro">This app is made possible by open-source software. Thank you to everyone who built it.</string>
+    <string name="credits_licence_note">Open-source components keep their own licences, including the GNU GPL. The licence texts and copyright notices stay with this app.</string>
+    <string name="credits_source_code">Source code</string>
+    <string name="credits_all_libraries">All open-source libraries</string>
+    <string name="credits_footer">© NIAZNIX</string>
+</resources>
